@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeLog v4.0 (Pro Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" id="flatpickr-theme" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+    <script type="text/javascript" src="/eel.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        bgDark: '#1E2329', cardDark: '#2B3139', inputBgDark: '#3E4651',
+                        bgLight: '#F3F4F6', cardLight: '#FFFFFF', inputBgLight: '#E5E7EB',
+                        primary: '#26C0DB', crypto: '#4ECDC4',
+                        danger: '#FF6B6B', success: '#0ECB81'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        body { transition: background-color 0.5s ease, color 0.5s ease; }
+        .glass { transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease; }
+        .dark .glass { background: rgba(43, 49, 57, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(0, 0, 0, 0.05); }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #6b7280; }
+        th.sortable { cursor: pointer; transition: background 0.2s; user-select: none; }
+        th.sortable:hover { background: rgba(128,128,128,0.1); }
+        
+        input[type="checkbox"] {
+            appearance: none; -webkit-appearance: none; background-color: #E5E7EB; margin: 0;
+            width: 1.15rem; height: 1.15rem; border-radius: 0.25rem; display: grid; place-content: center;
+            cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid transparent;
+        }
+        .dark input[type="checkbox"] { background-color: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); }
+        input[type="checkbox"]::before {
+            content: ""; width: 0.65rem; height: 0.65rem; transform: scale(0); transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white; background-color: white; transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        input[type="checkbox"]:checked { background-color: #FF6B6B; border-color: #FF6B6B; }
+        input[type="checkbox"]:checked::before { transform: scale(1); }
+        input[type="checkbox"]:hover { transform: scale(1.1); }
+
+        .sync-h { height: 42px; display: flex; align-items: center; }
+        .table-num { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="bg-bgLight dark:bg-bgDark text-gray-800 dark:text-white font-sans h-screen flex overflow-hidden">
+
+    <!-- ==================== 左側：獨立【輸入區】 ==================== -->
+    <div id="sidebar" class="w-[320px] glass m-4 rounded-3xl p-6 flex flex-col shadow-2xl z-20 overflow-y-auto custom-scrollbar border-r border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-extrabold flex items-center gap-2 tracking-wide select-none">
+                <div class="bg-primary/10 dark:bg-primary/20 p-2 rounded-xl flex items-center justify-center shadow-inner border border-primary/20">
+                    <iconify-icon icon="solar:notebook-bookmark-bold-duotone" class="text-primary text-3xl"></iconify-icon>
+                </div>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-crypto">TradeLog</span>
+            </h1>
+            <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-inputBgDark transition-colors flex items-center justify-center">
+                <iconify-icon id="theme-icon" icon="solar:moon-stars-bold-duotone" class="text-2xl text-primary"></iconify-icon>
+            </button>
+        </div>
+
+        <div class="flex bg-inputBgLight dark:bg-inputBgDark rounded-xl p-1 mb-5 transition-colors shadow-inner">
+            <button onclick="setInputMarket('台股')" id="btn-in-tw" class="flex-1 py-2 rounded-lg text-sm font-bold bg-primary text-white dark:text-bgDark transition-all shadow-md flex justify-center items-center gap-1">
+                <iconify-icon icon="ic:twotone-candlestick-chart" class="text-lg"></iconify-icon>台股
+            </button>
+            <button onclick="setInputMarket('美股')" id="btn-in-us" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all flex justify-center items-center gap-1">
+                <iconify-icon icon="solar:global-bold-duotone" class="text-lg"></iconify-icon>美股
+            </button>
+            <button onclick="setInputMarket('Crypto')" id="btn-in-crypto" class="flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all flex justify-center items-center gap-1">
+                <iconify-icon icon="ic:twotone-currency-bitcoin" class="text-lg"></iconify-icon>Crypto
+            </button>
+        </div>
+
+        <div id="form-container" class="space-y-4 flex-1 mt-1"></div>
+
+        <button id="btn-save" onclick="saveRecord()" class="w-full mt-6 bg-primary hover:bg-cyan-400 text-white dark:text-bgDark font-bold py-3.5 rounded-xl transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex justify-center items-center gap-2 text-base">
+            <iconify-icon icon="solar:diskette-bold" class="text-xl"></iconify-icon> 儲存紀錄
+        </button>
+        
+        <button id="btn-cancel-edit" onclick="cancelEdit()" class="w-full mt-3 bg-gray-500 hover:bg-gray-400 text-white font-bold py-3.5 rounded-xl transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex justify-center items-center gap-2 text-base hidden">
+            <iconify-icon icon="solar:close-circle-bold" class="text-xl"></iconify-icon> 取消編輯
+        </button>
+    </div>
+
+    <!-- ==================== 右側：獨立【查看區】 ==================== -->
+    <div class="flex-1 p-4 flex flex-col overflow-hidden relative z-10">
+        
+        <div class="grid grid-cols-3 gap-6 mb-6" id="stats-cards">
+            <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-32 h-32 bg-blue-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold flex items-center gap-2">台股總盈虧 (TWD)</h2>
+                        <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" style="word-break: break-word;" id="stat-twd">$0</div>
+                    </div>
+                    <iconify-icon icon="solar:wallet-bold-duotone" class="text-6xl flex-shrink-0 text-blue-500 opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                </div>
+            </div>
+            <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-32 h-32 bg-purple-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold flex items-center gap-2">美股總盈虧 (USD)</h2>
+                        <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" style="word-break: break-word;" id="stat-usd">$0.0</div>
+                    </div>
+                    <iconify-icon icon="solar:dollar-bold-duotone" class="text-6xl flex-shrink-0 text-purple-500 opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                </div>
+            </div>
+            <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                <div class="absolute -right-6 -top-6 w-32 h-32 bg-crypto rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold flex items-center gap-2">Crypto 總盈虧 (USDT)</h2>
+                        <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" style="word-break: break-word;" id="stat-crypto">$0.0</div>
+                    </div>
+                    <iconify-icon icon="ic:twotone-currency-bitcoin" class="text-6xl flex-shrink-0 text-crypto opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 glass rounded-3xl flex flex-col overflow-hidden shadow-xl">
+            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-cardDark/50 p-3 px-5 transition-colors">
+                <div class="flex bg-white dark:bg-bgDark rounded-xl p-1 shadow-sm border border-gray-200 dark:border-gray-600">
+                    <button onclick="setViewMarket('台股')" id="btn-view-tw" class="px-5 py-2 rounded-lg text-sm font-bold bg-primary text-white dark:text-bgDark transition-all shadow-sm">檢視台股</button>
+                    <button onclick="setViewMarket('美股')" id="btn-view-us" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all">檢視美股</button>
+                    <button onclick="setViewMarket('Crypto')" id="btn-view-crypto" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all">檢視加密貨幣</button>
+                </div>
+                <div class="flex gap-4 items-center">
+                    <div class="flex gap-1">
+                        <button onclick="setTableTab('買入')" id="tab-buy" class="px-5 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark text-primary font-bold transition flex items-center gap-1.5 shadow-sm border border-gray-200 dark:border-gray-600">
+                            <iconify-icon icon="solar:cart-large-minimalistic-bold-duotone"></iconify-icon>買入紀錄
+                        </button>
+                        <button onclick="setTableTab('賣出')" id="tab-sell" class="px-5 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-inputBgDark transition flex items-center gap-1.5">
+                            <iconify-icon icon="solar:tag-price-bold-duotone"></iconify-icon>賣出紀錄
+                        </button>
+                    </div>
+                    <button onclick="deleteSelected()" id="btn-batch-delete" class="hidden px-4 py-2 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded-xl font-bold transition flex items-center gap-2 border border-danger/20">
+                        <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> 刪除選取 (<span id="selected-count">0</span>)
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-auto custom-scrollbar">
+                <table class="w-full text-center border-collapse min-w-[1000px] table-auto">
+                    <thead class="text-gray-500 dark:text-gray-400 text-sm tracking-wider border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-bgDark/95 backdrop-blur-md z-10" id="table-head">
+                    </thead>
+                    <tbody id="table-body" class="text-sm text-gray-700 dark:text-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS 邏輯 -->
+    <script>
+        let inputMarket = '台股'; 
+        let viewMarket = '台股';  
+        let tableTab = '買入';    
+        
+        let allRecords =[]; 
+        let isDarkMode = true;
+        let editingId = null; 
+        
+        let sortCol = 'id'; 
+        let sortAsc = false; 
+        let selectedRows = new Set();
+        let fpInstance = null;
+
+        window.onload = async () => {
+            gsap.from("#sidebar", { x: -50, opacity: 0, duration: 0.8, ease: "power3.out" });
+            gsap.from("#stats-cards > div", { y: 30, opacity: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" });
+            
+            document.addEventListener('click', (e) => {
+                if(!e.target.closest('.custom-dropdown')) closeAllDropdowns();
+            });
+
+            renderForm();
+            await refreshData();
+        };
+
+        function getLocalToday(isStock) {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            return isStock ? `${year}${month}${day}` : `${year}-${month}-${day} ${hours}:${mins}`;
+        }
+
+        function calculateFee() {
+            if (inputMarket !== '台股') return; 
+            
+            const actionInput = document.getElementById('f_action');
+            const qtyInput = document.getElementById('f_qty');
+            const priceInput = document.getElementById('f_price');
+            const actualInput = document.getElementById('f_actual_twd');
+            const feeInput = document.getElementById('f_fee');
+            
+            if (!actionInput || !qtyInput || !priceInput || !actualInput || !feeInput) return;
+            
+            const action = actionInput.value;
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const actual = parseFloat(actualInput.value) || 0;
+            
+            if (qty > 0 && price > 0 && actual > 0) {
+                const cost = qty * price;
+                let fee = action === '買入' ? actual - cost : cost - actual;
+                feeInput.value = fee >= 0 ? Math.round(fee) : 0; 
+            }
+        }
+
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            document.getElementById('flatpickr-theme').href = isDarkMode 
+                ? "https://npmcdn.com/flatpickr/dist/themes/dark.css" 
+                : "https://npmcdn.com/flatpickr/dist/themes/light.css";
+
+            gsap.to(icon, { 
+                rotation: "+=360", scale: 0, duration: 0.25, 
+                onComplete: () => {
+                    html.classList.toggle('dark');
+                    icon.setAttribute('icon', isDarkMode ? 'solar:moon-stars-bold-duotone' : 'solar:sun-bold-duotone');
+                    gsap.to(icon, { scale: 1, duration: 0.4, ease: "back.out(1.5)" });
+                }
+            });
+        }
+
+        function setInputMarket(market) {
+            if(editingId) cancelEdit(); 
+            inputMarket = market;
+            
+            const activeClass = "flex-1 py-2 rounded-lg text-sm font-bold bg-primary text-white dark:text-bgDark transition-all shadow-md flex justify-center items-center gap-1";
+            const inactiveClass = "flex-1 py-2 rounded-lg text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all flex justify-center items-center gap-1";
+            
+            document.getElementById('btn-in-tw').className = market === '台股' ? activeClass : inactiveClass;
+            document.getElementById('btn-in-us').className = market === '美股' ? activeClass : inactiveClass;
+            document.getElementById('btn-in-crypto').className = market === 'Crypto' ? activeClass.replace('bg-primary', 'bg-crypto') : inactiveClass;
+            
+            const saveBtn = document.getElementById('btn-save');
+            saveBtn.className = `w-full mt-6 font-bold py-3.5 rounded-xl transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex justify-center items-center gap-2 text-base text-white dark:text-bgDark ${market==='Crypto' ? 'bg-crypto hover:bg-teal-400' : 'bg-primary hover:bg-cyan-400'}`;
+
+            renderForm();
+        }
+
+        function renderForm() {
+            if(fpInstance) fpInstance.destroy(); 
+            const container = document.getElementById('form-container');
+            let html = '';
+            const inputClass = 'sync-h w-full px-3 bg-inputBgLight dark:bg-inputBgDark text-gray-800 dark:text-white rounded-xl border border-transparent focus:border-primary outline-none transition-all shadow-sm text-sm font-medium';
+            const labelClass = 'text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 font-bold mb-1 ml-1';
+            const todayStr = getLocalToday(inputMarket !== 'Crypto');
+
+            if (inputMarket === '台股' || inputMarket === '美股') {
+                const currency = inputMarket === '台股' ? 'TWD' : 'USD';
+                html += `
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:calendar-bold-duotone"></iconify-icon>交易日期</label><input type="text" id="f_date" class="${inputClass}" value="${todayStr}"></div>
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:hand-money-bold-duotone"></iconify-icon>買賣動作</label>${createDropdown('f_action',['買入', '賣出'], '買入')}</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:tag-bold-duotone"></iconify-icon>股票代碼</label><input type="text" id="f_symbol" class="${inputClass} uppercase"></div>
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:text-square-bold-duotone"></iconify-icon>股票名稱</label><input type="text" id="f_name" class="${inputClass}"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:layers-bold-duotone"></iconify-icon>數量(股)</label><input type="number" id="f_qty" class="${inputClass}" step="0.01" oninput="calculateFee()"></div>
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:wad-of-money-bold-duotone"></iconify-icon>單價 (${currency})</label><input type="number" id="f_price" class="${inputClass}" step="0.01" oninput="calculateFee()"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:card-bold-duotone"></iconify-icon>實際扣款(TWD)</label><input type="number" id="f_actual_twd" class="${inputClass}" step="0.01" oninput="calculateFee()"></div>
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:ticket-sale-bold-duotone"></iconify-icon>手續費(${currency})</label><input type="number" id="f_fee" class="${inputClass}" value="0" step="0.01"></div>
+                    </div>
+                    <!-- 已經拔除股票的盈虧金額欄位 -->
+                    <div class="w-full mt-1">
+                        <label class="${labelClass}"><iconify-icon icon="solar:document-text-bold-duotone"></iconify-icon>備註</label><input type="text" id="f_remark" class="${inputClass}">
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:calendar-bold-duotone"></iconify-icon>日期時間</label><input type="text" id="f_dt" class="${inputClass}" value="${todayStr}"></div>
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:hand-money-bold-duotone"></iconify-icon>買賣動作</label>${createDropdown('f_c_action',['買入', '賣出'], '買入')}</div>
+                    </div>
+                    <div class="w-full"><label class="${labelClass}"><iconify-icon icon="ic:twotone-currency-bitcoin"></iconify-icon>幣種 (如 BTC)</label><input type="text" id="f_c_symbol" class="${inputClass} uppercase"></div>
+                    
+                    <div class="grid grid-cols-2 gap-3 w-full">
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:wad-of-money-bold-duotone"></iconify-icon>成交金額(USDT)</label><input type="number" id="f_c_price" class="${inputClass}" step="0.000001"></div>
+                        <div class="w-full"><label class="${labelClass}"><iconify-icon icon="solar:graph-up-bold-duotone"></iconify-icon>盈虧金額(USDT)</label><input type="number" id="f_c_profit" class="${inputClass}" value="0" step="0.01"></div>
+                    </div>
+                    <div class="w-full mt-1"><label class="${labelClass}"><iconify-icon icon="solar:document-text-bold-duotone"></iconify-icon>備註</label><input type="text" id="f_c_remark" class="${inputClass}"></div>
+                `;
+            }
+            container.innerHTML = html;
+            
+            fpInstance = flatpickr(inputMarket === 'Crypto' ? "#f_dt" : "#f_date", {
+                enableTime: inputMarket === 'Crypto',
+                dateFormat: inputMarket === 'Crypto' ? "Y-m-d H:i" : "Ymd",
+                time_24hr: true, allowInput: true 
+            });
+        }
+
+        async function saveRecord() {
+            let data = {};
+            let isStockMode = (inputMarket === '台股' || inputMarket === '美股');
+            try {
+                if (isStockMode) {
+                    data = {
+                        date: document.getElementById('f_date').value,
+                        market: inputMarket,
+                        symbol: document.getElementById('f_symbol').value.toUpperCase(),
+                        name: document.getElementById('f_name').value,
+                        action: document.getElementById('f_action').value,
+                        qty: parseFloat(document.getElementById('f_qty').value || 0),
+                        price_twd: inputMarket === '台股' ? parseFloat(document.getElementById('f_price').value || 0) : 0,
+                        price_usd: inputMarket === '美股' ? parseFloat(document.getElementById('f_price').value || 0) : 0,
+                        actual_twd: parseFloat(document.getElementById('f_actual_twd').value || 0),
+                        fee: parseFloat(document.getElementById('f_fee').value || 0),
+                        profit: 0, // 【重要】股票盈虧交給後端自動計算，送出 0 即可
+                        remark: document.getElementById('f_remark').value
+                    };
+                } else {
+                    data = {
+                        dt: document.getElementById('f_dt').value,
+                        symbol: document.getElementById('f_c_symbol').value.toUpperCase(),
+                        action: document.getElementById('f_c_action').value,
+                        price: parseFloat(document.getElementById('f_c_price').value || 0),
+                        profit: parseFloat(document.getElementById('f_c_profit').value || 0),
+                        remark: document.getElementById('f_c_remark').value
+                    };
+                }
+
+                const tableMode = isStockMode ? 'Stock' : 'Crypto';
+                const res = editingId ? await eel.update_record(tableMode, editingId, data)() : await eel.add_record(tableMode, data)();
+                
+                if (res.status === 'success') {
+                    gsap.fromTo("body", {backgroundColor: "#0ECB81"}, {backgroundColor: isDarkMode ? "#1E2329" : "#F3F4F6", duration: 0.8, ease: "power2.out", clearProps: "backgroundColor"});
+                    if(editingId) cancelEdit();
+                    else {
+                        if(isStockMode) document.getElementById('f_symbol').value = '';
+                        else document.getElementById('f_c_symbol').value = '';
+                    }
+                    
+                    if(viewMarket !== inputMarket) setViewMarket(inputMarket);
+                    else await refreshData(); // refreshData 會抓取新的看板總盈虧數字！
+                } else {
+                    // 如果庫存不足，後端會回傳錯誤，這裡會優雅地彈出警告
+                    alert("儲存失敗: " + res.message);
+                }
+            } catch (e) { alert("請檢查欄位格式是否正確！"); }
+        }
+
+        function setViewMarket(market) {
+            viewMarket = market;
+            selectedRows.clear(); updateBatchDeleteButton();
+            
+            const activeClass = "px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm text-white dark:text-bgDark ";
+            const inactiveClass = "px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all bg-transparent";
+            
+            document.getElementById('btn-view-tw').className = market === '台股' ? activeClass + 'bg-primary' : inactiveClass;
+            document.getElementById('btn-view-us').className = market === '美股' ? activeClass + 'bg-primary' : inactiveClass;
+            document.getElementById('btn-view-crypto').className = market === 'Crypto' ? activeClass + 'bg-crypto' : inactiveClass;
+            
+            refreshData();
+        }
+
+        function setTableTab(tab) {
+            selectedRows.clear(); updateBatchDeleteButton();
+            tableTab = tab;
+            const activeClass = 'px-5 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark text-primary font-bold transition flex items-center gap-1.5 shadow-sm border border-gray-200 dark:border-gray-600';
+            const inactiveClass = 'px-5 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-inputBgDark transition flex items-center gap-1.5 border border-transparent';
+            
+            document.getElementById('tab-buy').className = tab === '買入' ? activeClass : inactiveClass;
+            document.getElementById('tab-sell').className = tab === '賣出' ? activeClass : inactiveClass;
+            renderTable();
+        }
+
+        async function refreshData() {
+            const stats = await eel.get_dashboard_stats()();
+            if (stats.status === 'success') {
+                animateValue("stat-twd", stats.data.twd, 'TWD');
+                animateValue("stat-usd", stats.data.usd, 'USD');
+                animateValue("stat-crypto", stats.data.crypto, 'USDT');
+            }
+
+            const tableMode = (viewMarket === '台股' || viewMarket === '美股') ? 'Stock' : 'Crypto';
+            const res = await eel.get_records(tableMode)();
+            
+            if (res.status === 'success') {
+                allRecords = res.data.map(r => {
+                    if(tableMode === 'Stock') r.total_cost = r.qty * (r.market === '台股' ? r.price_twd : r.price_usd);
+                    return r;
+                });
+                renderTable();
+            }
+        }
+
+        function getTh(label, colKey, align="center") {
+            const isSorted = sortCol === colKey;
+            const iconHtml = isSorted 
+                ? `<iconify-icon icon="${sortAsc ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold'}" class="text-primary text-lg"></iconify-icon>` 
+                : '';
+            const justify = align === 'right' ? 'justify-end' : (align === 'left' ? 'justify-start' : 'justify-center');
+            
+            return `<th class="px-3 py-3 sortable whitespace-nowrap" onclick="handleSort('${colKey}')">
+                <div class="flex items-center gap-1.5 ${justify}">
+                    ${label} ${iconHtml}
+                </div>
+            </th>`;
+        }
+
+        function renderTable() {
+            const head = document.getElementById('table-head');
+            const body = document.getElementById('table-body');
+            head.innerHTML = ''; body.innerHTML = '';
+
+            let displayData = allRecords.filter(r => r.action === tableTab);
+            if(viewMarket === '台股' || viewMarket === '美股') {
+                displayData = displayData.filter(r => r.market === viewMarket);
+            }
+
+            displayData.sort((a, b) => {
+                let valA = a[sortCol] || ''; let valB = b[sortCol] || '';
+                if(typeof valA === 'string') return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                return sortAsc ? valA - valB : valB - valA;
+            });
+
+            const allChecked = displayData.length > 0 && displayData.every(r => selectedRows.has(r.id));
+            const chkHead = `<th class="px-4 py-3 w-10 text-center"><input type="checkbox" onclick="toggleSelectAll(this)" ${allChecked ? 'checked' : ''}></th>`;
+            
+            const tdText = "px-3 py-3 whitespace-nowrap text-center text-gray-700 dark:text-gray-200"; 
+            const tdNum = "px-3 py-3 whitespace-nowrap text-center table-num text-gray-700 dark:text-gray-200"; 
+
+            if (viewMarket === '台股' || viewMarket === '美股') {
+                const currency = viewMarket === '台股' ? 'TWD' : 'USD';
+                
+                head.innerHTML = `<tr>${chkHead}
+                    ${getTh('日期', 'date', 'center')} ${getTh('代碼', 'symbol', 'center')} ${getTh('名稱', 'name', 'center')} 
+                    ${getTh('數量', 'qty', 'center')} ${getTh(`單價(${currency})`, viewMarket==='台股'?'price_twd':'price_usd', 'center')}
+                    ${getTh(`總成本(${currency})`, 'total_cost', 'center')}
+                    ${getTh('實際扣款', 'actual_twd', 'center')} ${getTh('手續費', 'fee', 'center')}
+                    ${getTh('盈虧', 'profit', 'center')} <th class="px-3 py-3 text-center whitespace-nowrap">備註</th><th class="px-3 py-3 text-center whitespace-nowrap">操作</th>
+                </tr>`;
+
+                displayData.forEach(row => {
+                    const price = viewMarket === '台股' ? row.price_twd : row.price_usd;
+                    const pColor = row.profit > 0 ? 'text-success' : (row.profit < 0 ? 'text-danger' : 'text-gray-500 dark:text-gray-400');
+                    const isChecked = selectedRows.has(row.id) ? 'checked' : '';
+                    
+                    body.innerHTML += `
+                        <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-inputBgLight/60 dark:hover:bg-inputBgDark/60 transition-colors group">
+                            <td class="px-4 py-3 text-center"><input type="checkbox" value="${row.id}" onchange="toggleRowSelection(this)" ${isChecked}></td>
+                            <td class="${tdText}">${row.date}</td>
+                            <td class="${tdText} font-bold text-primary">${row.symbol}</td>
+                            <td class="${tdText}">${row.name || '-'}</td>
+                            <td class="${tdNum}">${row.qty}</td>
+                            <td class="${tdNum}">${price}</td>
+                            <td class="${tdNum} font-bold text-purple-500 dark:text-purple-400">${row.total_cost.toFixed(2)}</td>
+                            <td class="${tdNum}">${row.actual_twd}</td>
+                            <td class="${tdNum}">${row.fee}</td>
+                            <td class="${tdNum} font-bold ${pColor}">${row.profit}</td>
+                            <td class="${tdText} text-xs text-gray-500 truncate max-w-[120px]" title="${row.remark || ''}">${row.remark || '-'}</td>
+                            <td class="px-3 py-3 text-center flex gap-3 justify-center whitespace-nowrap opacity-70 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editRow(${row.id})" class="text-primary hover:text-cyan-400 transition transform hover:scale-125"><iconify-icon icon="solar:pen-bold" class="text-lg"></iconify-icon></button>
+                                <button onclick="deleteRows([${row.id}])" class="text-danger hover:text-red-400 transition transform hover:scale-125"><iconify-icon icon="solar:trash-bin-trash-bold" class="text-lg"></iconify-icon></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                head.innerHTML = `<tr>${chkHead}
+                    ${getTh('時間', 'dt', 'center')} ${getTh('幣種', 'symbol', 'center')} 
+                    ${getTh('成交金額(USDT)', 'price', 'center')}
+                    ${getTh('盈虧(USDT)', 'profit', 'center')} <th class="px-3 py-3 text-center whitespace-nowrap">備註</th><th class="px-3 py-3 text-center whitespace-nowrap">操作</th>
+                </tr>`;
+
+                displayData.forEach(row => {
+                    const pColor = row.profit > 0 ? 'text-success' : (row.profit < 0 ? 'text-danger' : 'text-gray-500 dark:text-gray-400');
+                    const isChecked = selectedRows.has(row.id) ? 'checked' : '';
+                    body.innerHTML += `
+                        <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-inputBgLight/60 dark:hover:bg-inputBgDark/60 transition-colors group">
+                            <td class="px-4 py-3 text-center"><input type="checkbox" value="${row.id}" onchange="toggleRowSelection(this)" ${isChecked}></td>
+                            <td class="${tdText}">${row.dt}</td>
+                            <td class="${tdText} font-bold text-crypto tracking-wide">${row.symbol}</td>
+                            <td class="${tdNum}">${row.price}</td>
+                            <td class="${tdNum} font-bold ${pColor}">${row.profit}</td>
+                            <td class="${tdText} text-xs text-gray-500 truncate max-w-[150px]" title="${row.remark || ''}">${row.remark || '-'}</td>
+                            <td class="px-3 py-3 text-center flex gap-3 justify-center whitespace-nowrap opacity-70 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editRow(${row.id})" class="text-crypto hover:text-teal-400 transition transform hover:scale-125"><iconify-icon icon="solar:pen-bold" class="text-lg"></iconify-icon></button>
+                                <button onclick="deleteRows([${row.id}])" class="text-danger hover:text-red-400 transition transform hover:scale-125"><iconify-icon icon="solar:trash-bin-trash-bold" class="text-lg"></iconify-icon></button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function toggleRowSelection(cb) {
+            const val = parseInt(cb.value);
+            if(cb.checked) selectedRows.add(val); else selectedRows.delete(val);
+            updateBatchDeleteButton();
+        }
+        function toggleSelectAll(cb) {
+            let displayData = allRecords.filter(r => r.action === tableTab);
+            if(viewMarket !== 'Crypto') displayData = displayData.filter(r => r.market === viewMarket);
+            if(cb.checked) displayData.forEach(r => selectedRows.add(r.id)); else selectedRows.clear();
+            renderTable(); updateBatchDeleteButton();
+        }
+        function updateBatchDeleteButton() {
+            const btn = document.getElementById('btn-batch-delete');
+            document.getElementById('selected-count').innerText = selectedRows.size;
+            if(selectedRows.size > 0) btn.classList.remove('hidden'); else btn.classList.add('hidden');
+        }
+        async function deleteSelected() {
+            if(selectedRows.size === 0) return;
+            if(confirm(`確定要刪除這 ${selectedRows.size} 筆紀錄嗎？`)) {
+                const tableMode = (viewMarket === '台股' || viewMarket === '美股') ? 'Stock' : 'Crypto';
+                await eel.delete_records(tableMode, Array.from(selectedRows))();
+                selectedRows.clear(); updateBatchDeleteButton(); refreshData();
+            }
+        }
+        async function deleteRows(ids) {
+            if (!confirm("確定要刪除嗎？")) return;
+            const tableMode = (viewMarket === '台股' || viewMarket === '美股') ? 'Stock' : 'Crypto';
+            await eel.delete_records(tableMode, ids)();
+            refreshData();
+        }
+
+        function editRow(id) {
+            const row = allRecords.find(r => r.id === id);
+            editingId = id;
+            
+            const targetMarket = (viewMarket === 'Crypto') ? 'Crypto' : row.market;
+            if(inputMarket !== targetMarket) setInputMarket(targetMarket);
+            
+            if(inputMarket !== 'Crypto') {
+                fpInstance.setDate(row.date);
+                selectOption('f_action', row.action);
+                document.getElementById('f_symbol').value = row.symbol;
+                document.getElementById('f_name').value = row.name || '';
+                document.getElementById('f_qty').value = row.qty || '';
+                document.getElementById('f_price').value = (row.market === '台股') ? (row.price_twd||'') : (row.price_usd||'');
+                document.getElementById('f_actual_twd').value = row.actual_twd || '';
+                document.getElementById('f_fee').value = row.fee || '';
+                // 【重要】已經移除股票的 document.getElementById('f_profit').value = ...，避免出錯！
+                document.getElementById('f_remark').value = row.remark || '';
+            } else {
+                fpInstance.setDate(row.dt);
+                selectOption('f_c_action', row.action);
+                document.getElementById('f_c_symbol').value = row.symbol;
+                document.getElementById('f_c_price').value = row.price || '';
+                document.getElementById('f_c_profit').value = row.profit || '';
+                document.getElementById('f_c_remark').value = row.remark || '';
+            }
+
+            const btn = document.getElementById('btn-save');
+            btn.innerHTML = `<iconify-icon icon="solar:pen-bold" class="text-xl"></iconify-icon> 更新紀錄`;
+            btn.classList.replace('bg-primary', 'bg-purple-500');
+            btn.classList.replace('hover:bg-cyan-400', 'hover:bg-purple-400');
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+            document.getElementById('sidebar').scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            renderForm(); 
+            const btn = document.getElementById('btn-save');
+            btn.innerHTML = `<iconify-icon icon="solar:diskette-bold" class="text-xl"></iconify-icon> 儲存紀錄`;
+            btn.classList.replace('bg-purple-500', 'bg-primary');
+            btn.classList.replace('hover:bg-purple-400', 'hover:bg-cyan-400');
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        }
+
+        function createDropdown(id, options, defaultVal) {
+            let optsHtml = options.map(o => `
+                <li onclick="selectOption('${id}', '${o}')" class="px-4 py-2 hover:bg-primary/20 cursor-pointer transition-colors flex items-center gap-2">
+                    <iconify-icon icon="${o==='買入' ? 'solar:cart-large-minimalistic-bold-duotone' : 'solar:tag-price-bold-duotone'}" class="text-primary"></iconify-icon>${o}
+                </li>`).join('');
+            return `<div class="relative custom-dropdown z-20 w-full" id="dropdown-wrap-${id}">
+                <div class="sync-h w-full px-3 bg-inputBgLight dark:bg-inputBgDark text-gray-800 dark:text-white rounded-xl border border-transparent hover:border-primary transition-all shadow-sm cursor-pointer text-sm font-medium" onclick="toggleDropdown('${id}')">
+                    <span id="${id}-text" class="flex items-center gap-1.5"><iconify-icon icon="${defaultVal==='買入' ? 'solar:cart-large-minimalistic-bold-duotone' : 'solar:tag-price-bold-duotone'}" class="text-primary"></iconify-icon>${defaultVal}</span>
+                    <iconify-icon icon="solar:alt-arrow-down-bold" id="${id}-arrow" class="text-gray-400 transition-transform duration-300"></iconify-icon>
+                </div>
+                <ul id="${id}-list" class="absolute w-full mt-2 bg-white dark:bg-cardDark border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl overflow-hidden hidden opacity-0 transition-all text-sm font-medium z-30">${optsHtml}</ul>
+                <input type="hidden" id="${id}" value="${defaultVal}">
+            </div>`;
+        }
+        function toggleDropdown(id) {
+            closeAllDropdowns(id); const list = document.getElementById(`${id}-list`); const arrow = document.getElementById(`${id}-arrow`);
+            if(list.classList.contains('hidden')) {
+                list.classList.remove('hidden'); gsap.to(list, {opacity: 1, y: 0, duration: 0.3, ease: "back.out(1.5)"}); arrow.style.transform = 'rotate(180deg)';
+            } else {
+                gsap.to(list, {opacity: 0, y: -10, duration: 0.2, onComplete: () => list.classList.add('hidden')}); arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+        function selectOption(id, val) {
+            document.getElementById(id).value = val;
+            document.getElementById(`${id}-text`).innerHTML = `<iconify-icon icon="${val==='買入' ? 'solar:cart-large-minimalistic-bold-duotone' : 'solar:tag-price-bold-duotone'}" class="text-primary"></iconify-icon>${val}`;
+            toggleDropdown(id);
+            if(id === 'f_action') calculateFee(); 
+        }
+        function closeAllDropdowns(exceptId = null) {
+            document.querySelectorAll('.custom-dropdown ul').forEach(list => {
+                if(exceptId && list.id === `${exceptId}-list`) return;
+                gsap.to(list, {opacity: 0, y: -10, duration: 0.2, onComplete: () => list.classList.add('hidden')});
+            });
+            document.querySelectorAll('.custom-dropdown iconify-icon[id$="-arrow"]').forEach(arrow => {
+                if(exceptId && arrow.id === `${exceptId}-arrow`) return;
+                arrow.style.transform = 'rotate(0deg)';
+            });
+        }
+
+        function animateValue(id, endValue, currency) {
+            let el = document.getElementById(id);
+            let obj = { val: parseFloat(el.innerText.replace(/[^0-9.-]+/g, "")) || 0 };
+            
+            let minDecimals = currency === 'TWD' ? 0 : 1;
+            let maxDecimals = currency === 'TWD' ? 0 : 1;
+            
+            gsap.fromTo(el, { scale: 1.1 }, { scale: 1, duration: 0.6, ease: "back.out(2)" });
+            gsap.to(obj, { val: endValue, duration: 1.5, ease: "power2.out", onUpdate: () => {
+                let prefix = obj.val > 0 ? "+" : "";
+                let formattedStr = `${prefix}${obj.val.toLocaleString('en-US', {minimumFractionDigits: minDecimals, maximumFractionDigits: maxDecimals})}`;
+                el.innerText = formattedStr;
+                
+                let len = formattedStr.length;
+                let fontSizeClass = "text-4xl lg:text-5xl";
+                if (len >= 13) fontSizeClass = "text-2xl lg:text-3xl";
+                else if (len >= 10) fontSizeClass = "text-3xl lg:text-4xl";
+                
+                el.className = `${fontSizeClass} font-bold mt-4 table-num stat-value transition-all duration-300 ${obj.val >= 0 ? 'text-success' : 'text-danger'}`;
+            }});
+        }
+    </script>
+</body>
+</html>
