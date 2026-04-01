@@ -1,0 +1,17 @@
+# 資料庫檔案（每個人自己的資料）
+*.db
+
+# 環境變數（金鑰）
+.env
+
+# 虛擬環境
+.venv/
+
+# Python 暫存
+__pycache__/
+*.pyc
+
+# PyInstaller 打包產物
+*.spec
+build/
+dist/
