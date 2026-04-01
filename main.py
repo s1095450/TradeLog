@@ -110,6 +110,61 @@ def calculate_stock_profit(data, exclude_id=None):
     return data
 
 # ==================== Eel 暴露給前端的 API ====================
+@eel.expose
+def get_holdings():
+    """計算目前所有持倉的均價與成本"""
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT * FROM records ORDER BY date ASC, id ASC")
+        all_records = [dict(row) for row in c.fetchall()]
+        conn.close()
+
+        # 用 dict 追蹤每支股票的持倉狀態
+        holdings = {}
+
+        for r in all_records:
+            symbol = r['symbol']
+            market = r['market']
+            qty    = float(r.get('qty') or 0)
+            fee    = float(r.get('fee') or 0)
+            price  = float(r.get('price_twd') or 0) if market == '台股' else float(r.get('price_usd') or 0)
+
+            if symbol not in holdings:
+                holdings[symbol] = {
+                    'symbol': symbol,
+                    'name': r.get('name') or '',
+                    'market': market,
+                    'qty': 0.0,
+                    'total_cost': 0.0,
+                    'avg_cost': 0.0,
+                }
+
+            h = holdings[symbol]
+
+            if r['action'] == '買入':
+                h['total_cost'] += (price * qty + fee)
+                h['qty'] += qty
+            elif r['action'] == '賣出':
+                h['qty'] -= qty
+                if h['qty'] < 0:
+                    h['qty'] = 0.0
+
+            # 每次更新後重新計算均價
+            if h['qty'] > 0:
+                h['avg_cost'] = h['total_cost'] / h['qty']
+                h['total_cost'] = h['avg_cost'] * h['qty']
+            else:
+                h['qty'] = 0.0
+                h['avg_cost'] = 0.0
+                h['total_cost'] = 0.0
+
+        # 只回傳還有持倉的股票
+        result = [h for h in holdings.values() if h['qty'] > 0]
+        return {"status": "success", "data": result}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @eel.expose
 def get_dashboard_stats():

@@ -439,18 +439,26 @@ function renderTable() {
 // ==================== 導覽 ====================
 
 function navigateTo(page) {
-    // 更新導覽列 active 狀態
-    document.querySelectorAll('.nav-item').forEach(btn => {
-        btn.classList.remove('active');
-        btn.querySelector('iconify-icon').style.color = '';
-    });
-    document.getElementById(`nav-${page}`).classList.add('active');
+    // 更新所有頁面顯示狀態
+    document.getElementById('page-dashboard').classList.toggle('hidden', page !== 'dashboard');
+    document.getElementById('page-holdings').classList.toggle('hidden', page !== 'holdings');
 
-    // 目前只有 dashboard 
-    if (page === 'holdings' || page === 'charts') {
-        alert(`「${page === 'holdings' ? '持倉總覽' : '圖表分析'}」即將推出！`);
-        // 按完 alert 後把 active 還原回 dashboard
-        document.getElementById('nav-dashboard').classList.add('active');
-        return;
+    // 更新導覽列 active 狀態
+    ['dashboard', 'holdings', 'charts'].forEach(p => {
+        const btn = document.getElementById(`nav-${p}`);
+        if (!btn) return;
+        if (p === page) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+            btn.querySelector('iconify-icon').style.color = '';
+        }
+    });
+
+    // 各頁面初始化
+    if (page === 'holdings') initHoldings();
+    if (page === 'charts') {
+        alert('「圖表分析」即將推出！');
+        navigateTo('dashboard');
     }
 }

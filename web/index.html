@@ -78,17 +78,14 @@
 
     <!-- ==================== 最左側：64px 導覽列 ==================== -->
     <div class="w-16 glass m-4 mr-2 rounded-3xl flex flex-col items-center py-5 gap-2 shadow-2xl z-30 flex-shrink-0">
-
-        <!-- Logo -->
         <div class="bg-primary/10 dark:bg-primary/20 p-2 rounded-xl flex items-center justify-center shadow-inner border border-primary/20 mb-2">
             <iconify-icon icon="solar:notebook-bookmark-bold-duotone" class="text-primary text-2xl"></iconify-icon>
         </div>
 
-        <!-- 導覽項目 -->
         <button onclick="navigateTo('dashboard')" id="nav-dashboard"
             class="nav-item active w-11 h-11 rounded-xl flex items-center justify-center transition-all"
             data-tooltip="Dashboard">
-            <iconify-icon icon="solar:home-bold-duotone" class="text-2xl text-primary"></iconify-icon>
+            <iconify-icon icon="solar:home-bold-duotone" class="text-2xl"></iconify-icon>
         </button>
 
         <button onclick="navigateTo('holdings')" id="nav-holdings"
@@ -103,12 +100,10 @@
             <iconify-icon icon="solar:chart-bold-duotone" class="text-2xl"></iconify-icon>
         </button>
 
-        <!-- 彈性空間 -->
         <div class="flex-1"></div>
 
-        <!-- 深色/淺色切換 -->
         <button onclick="toggleTheme()"
-            class="w-11 h-11 rounded-full hover:bg-gray-200 dark:hover:bg-inputBgDark transition-colors flex items-center justify-center"
+            class="nav-item w-11 h-11 rounded-full hover:bg-gray-200 dark:hover:bg-inputBgDark transition-colors flex items-center justify-center"
             data-tooltip="切換主題">
             <iconify-icon id="theme-icon" icon="solar:moon-stars-bold-duotone" class="text-2xl text-primary"></iconify-icon>
         </button>
@@ -116,8 +111,6 @@
 
     <!-- ==================== 左側：輸入區 ==================== -->
     <div id="sidebar" class="w-[320px] glass m-4 ml-0 rounded-3xl p-6 flex flex-col shadow-2xl z-20 overflow-y-auto custom-scrollbar flex-shrink-0">
-
-        <!-- 市場切換 -->
         <div class="flex bg-inputBgLight dark:bg-inputBgDark rounded-xl p-1 mb-5 transition-colors shadow-inner">
             <button onclick="setInputMarket('台股')" id="btn-in-tw" class="flex-1 py-2 rounded-lg text-sm font-bold bg-primary text-white dark:text-bgDark transition-all shadow-md flex justify-center items-center gap-1">
                 <iconify-icon icon="ic:twotone-candlestick-chart" class="text-lg"></iconify-icon>台股
@@ -130,10 +123,8 @@
             </button>
         </div>
 
-        <!-- 表單區 -->
         <div id="form-container" class="space-y-4 flex-1 mt-1"></div>
 
-        <!-- 儲存按鈕 -->
         <button id="btn-save" onclick="saveRecord()" class="w-full mt-6 bg-primary hover:bg-cyan-400 text-white dark:text-bgDark font-bold py-3.5 rounded-xl transition transform hover:scale-[1.02] active:scale-[0.98] shadow-lg flex justify-center items-center gap-2 text-base">
             <iconify-icon icon="solar:diskette-bold" class="text-xl"></iconify-icon> 儲存紀錄
         </button>
@@ -142,79 +133,139 @@
         </button>
     </div>
 
-    <!-- ==================== 右側：查看區 ==================== -->
+    <!-- ==================== 右側：主內容區 ==================== -->
     <div class="flex-1 p-4 pl-2 flex flex-col overflow-hidden relative z-10">
 
-        <!-- 統計卡 -->
-        <div class="grid grid-cols-3 gap-6 mb-6" id="stats-cards">
-            <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                <div class="absolute -right-6 -top-6 w-32 h-32 bg-blue-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold">台股總盈虧 (TWD)</h2>
-                        <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" id="stat-twd">$0</div>
+        <!-- Dashboard 頁 -->
+        <div id="page-dashboard">
+            <!-- 統計卡 -->
+            <div class="grid grid-cols-3 gap-6 mb-6" id="stats-cards">
+                <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-blue-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
+                    <div class="flex justify-between items-center gap-4">
+                        <div class="flex-1 min-w-0">
+                            <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold">台股總盈虧 (TWD)</h2>
+                            <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" id="stat-twd">$0</div>
+                        </div>
+                        <iconify-icon icon="solar:wallet-bold-duotone" class="text-6xl flex-shrink-0 text-blue-500 opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
                     </div>
-                    <iconify-icon icon="solar:wallet-bold-duotone" class="text-6xl flex-shrink-0 text-blue-500 opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                </div>
+                <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-purple-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
+                    <div class="flex justify-between items-center gap-4">
+                        <div class="flex-1 min-w-0">
+                            <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold">美股總盈虧 (USD)</h2>
+                            <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" id="stat-usd">$0.0</div>
+                        </div>
+                        <iconify-icon icon="solar:dollar-bold-duotone" class="text-6xl flex-shrink-0 text-purple-500 opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                    </div>
+                </div>
+                <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 w-32 h-32 bg-crypto rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
+                    <div class="flex justify-between items-center gap-4">
+                        <div class="flex-1 min-w-0">
+                            <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold">Crypto 總盈虧 (USDT)</h2>
+                            <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" id="stat-crypto">$0.0</div>
+                        </div>
+                        <iconify-icon icon="ic:twotone-currency-bitcoin" class="text-6xl flex-shrink-0 text-crypto opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                    </div>
                 </div>
             </div>
-            <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                <div class="absolute -right-6 -top-6 w-32 h-32 bg-purple-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold">美股總盈虧 (USD)</h2>
-                        <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" id="stat-usd">$0.0</div>
+
+            <!-- 表格區 -->
+            <div class="flex-1 glass rounded-3xl flex flex-col overflow-hidden shadow-xl" style="height: calc(100vh - 220px);">
+                <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-cardDark/50 p-3 px-5 transition-colors">
+                    <div class="flex bg-white dark:bg-bgDark rounded-xl p-1 shadow-sm border border-gray-200 dark:border-gray-600">
+                        <button onclick="setViewMarket('台股')" id="btn-view-tw" class="px-5 py-2 rounded-lg text-sm font-bold bg-primary text-white dark:text-bgDark transition-all shadow-sm">檢視台股</button>
+                        <button onclick="setViewMarket('美股')" id="btn-view-us" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all">檢視美股</button>
+                        <button onclick="setViewMarket('Crypto')" id="btn-view-crypto" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all">檢視加密貨幣</button>
                     </div>
-                    <iconify-icon icon="solar:dollar-bold-duotone" class="text-6xl flex-shrink-0 text-purple-500 opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                    <div class="flex gap-4 items-center">
+                        <div class="flex gap-1">
+                            <button onclick="setTableTab('買入')" id="tab-buy" class="px-5 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark text-primary font-bold transition flex items-center gap-1.5 shadow-sm border border-gray-200 dark:border-gray-600">
+                                <iconify-icon icon="solar:cart-large-minimalistic-bold-duotone"></iconify-icon>買入紀錄
+                            </button>
+                            <button onclick="setTableTab('賣出')" id="tab-sell" class="px-5 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-inputBgDark transition flex items-center gap-1.5">
+                                <iconify-icon icon="solar:tag-price-bold-duotone"></iconify-icon>賣出紀錄
+                            </button>
+                        </div>
+                        <button onclick="deleteSelected()" id="btn-batch-delete" class="hidden px-4 py-2 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded-xl font-bold transition flex items-center gap-2 border border-danger/20">
+                            <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> 刪除選取 (<span id="selected-count">0</span>)
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
-                <div class="absolute -right-6 -top-6 w-32 h-32 bg-crypto rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition"></div>
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-gray-500 dark:text-gray-400 text-sm font-bold">Crypto 總盈虧 (USDT)</h2>
-                        <div class="text-4xl lg:text-5xl font-bold mt-4 text-success table-num stat-value transition-all duration-300" id="stat-crypto">$0.0</div>
-                    </div>
-                    <iconify-icon icon="ic:twotone-currency-bitcoin" class="text-6xl flex-shrink-0 text-crypto opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    <table class="w-full text-center border-collapse min-w-[1000px] table-auto">
+                        <thead class="text-gray-500 dark:text-gray-400 text-sm tracking-wider border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-bgDark/95 backdrop-blur-md z-10" id="table-head"></thead>
+                        <tbody id="table-body" class="text-sm text-gray-700 dark:text-gray-200"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- 表格區 -->
-        <div class="flex-1 glass rounded-3xl flex flex-col overflow-hidden shadow-xl">
-            <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-cardDark/50 p-3 px-5 transition-colors">
-                <div class="flex bg-white dark:bg-bgDark rounded-xl p-1 shadow-sm border border-gray-200 dark:border-gray-600">
-                    <button onclick="setViewMarket('台股')" id="btn-view-tw" class="px-5 py-2 rounded-lg text-sm font-bold bg-primary text-white dark:text-bgDark transition-all shadow-sm">檢視台股</button>
-                    <button onclick="setViewMarket('美股')" id="btn-view-us" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all">檢視美股</button>
-                    <button onclick="setViewMarket('Crypto')" id="btn-view-crypto" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all">檢視加密貨幣</button>
+        <!-- 持倉總覽頁 -->
+        <div id="page-holdings" class="hidden h-full flex flex-col gap-6" >
+
+            <!-- 頁面標題 -->
+            <div class="flex items-center gap-3">
+                <div class="bg-primary/10 dark:bg-primary/20 p-2 rounded-xl border border-primary/20">
+                    <iconify-icon icon="solar:case-bold-duotone" class="text-primary text-2xl"></iconify-icon>
                 </div>
-                <div class="flex gap-4 items-center">
-                    <div class="flex gap-1">
-                        <button onclick="setTableTab('買入')" id="tab-buy" class="px-5 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark text-primary font-bold transition flex items-center gap-1.5 shadow-sm border border-gray-200 dark:border-gray-600">
-                            <iconify-icon icon="solar:cart-large-minimalistic-bold-duotone"></iconify-icon>買入紀錄
-                        </button>
-                        <button onclick="setTableTab('賣出')" id="tab-sell" class="px-5 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-inputBgDark transition flex items-center gap-1.5">
-                            <iconify-icon icon="solar:tag-price-bold-duotone"></iconify-icon>賣出紀錄
-                        </button>
-                    </div>
-                    <button onclick="deleteSelected()" id="btn-batch-delete" class="hidden px-4 py-2 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded-xl font-bold transition flex items-center gap-2 border border-danger/20">
-                        <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> 刪除選取 (<span id="selected-count">0</span>)
-                    </button>
+                <div>
+                    <h1 class="text-xl font-extrabold">持倉總覽</h1>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">目前持有部位 · 移動平均成本法</p>
+                </div>
+                <button onclick="refreshHoldings()" class="ml-auto px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl font-bold transition flex items-center gap-2 text-sm border border-primary/20">
+                    <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 重新整理
+                </button>
+            </div>
+
+            <!-- 摘要統計卡 -->
+            <div class="grid grid-cols-4 gap-4" id="holdings-container">
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500 rounded-full opacity-10 blur-2xl"></div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">台股持倉數</p>
+                    <div class="text-3xl font-extrabold text-primary" id="h-tw-count">0</div>
+                    <p class="text-xs text-gray-400 mt-1">支股票</p>
+                </div>
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500 rounded-full opacity-10 blur-2xl"></div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">美股持倉數</p>
+                    <div class="text-3xl font-extrabold text-purple-400" id="h-us-count">0</div>
+                    <p class="text-xs text-gray-400 mt-1">支股票</p>
+                </div>
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500 rounded-full opacity-10 blur-2xl"></div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">台股總成本</p>
+                    <div class="text-2xl font-extrabold text-primary table-num" id="h-tw-cost">$0</div>
+                    <p class="text-xs text-gray-400 mt-1">TWD</p>
+                </div>
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500 rounded-full opacity-10 blur-2xl"></div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">美股總成本</p>
+                    <div class="text-2xl font-extrabold text-purple-400 table-num" id="h-us-cost">$0.00</div>
+                    <p class="text-xs text-gray-400 mt-1">USD</p>
                 </div>
             </div>
 
-            <div class="flex-1 overflow-auto custom-scrollbar">
-                <table class="w-full text-center border-collapse min-w-[1000px] table-auto">
-                    <thead class="text-gray-500 dark:text-gray-400 text-sm tracking-wider border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-bgDark/95 backdrop-blur-md z-10" id="table-head"></thead>
-                    <tbody id="table-body" class="text-sm text-gray-700 dark:text-gray-200"></tbody>
-                </table>
+            <!-- 持倉表格 -->
+            <div class="flex-1 glass rounded-3xl flex flex-col overflow-hidden shadow-xl">
+                <div class="flex-1 overflow-auto custom-scrollbar">
+                    <table class="w-full text-center border-collapse table-auto">
+                        <thead class="text-gray-500 dark:text-gray-400 text-sm tracking-wider border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-bgDark/95 backdrop-blur-md z-10" id="holdings-thead"></thead>
+                        <tbody id="holdings-tbody" class="text-sm text-gray-700 dark:text-gray-200"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
+
     </div>
 
     <!-- ==================== 載入 JS ==================== -->
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/dashboard.js"></script>
+    <script src="/js/holdings.js"></script>
     <script>
         window.onload = () => initDashboard();
     </script>
