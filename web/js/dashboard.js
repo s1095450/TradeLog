@@ -450,3 +450,32 @@ function navigateTo(page) {
     if (page === 'holdings') initHoldings();
     if (page === 'charts')   initCharts();
 }
+// ==================== 匯出 CSV ====================
+
+async function exportCsv() {
+    const tableMode = (viewMarket === '台股' || viewMarket === '美股') ? 'Stock' : 'Crypto';
+    const btn = document.getElementById('btn-export');
+    
+    // 按鈕 loading 狀態
+    btn.disabled = true;
+    btn.innerHTML = `<iconify-icon icon="solar:refresh-bold-duotone" class="text-base animate-spin"></iconify-icon> 匯出中...`;
+
+    const res = await API.exportCsv(tableMode);
+
+    btn.disabled = false;
+    btn.innerHTML = `<iconify-icon icon="solar:export-bold-duotone" class="text-base"></iconify-icon> 匯出 CSV`;
+
+    if (res.status === 'success') {
+        // 成功提示
+        const toast = document.getElementById('toast');
+        toast.innerText = `✅ 已匯出至桌面：${res.filename}`;
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.remove('opacity-100', 'translate-y-0');
+            toast.classList.add('opacity-0', 'translate-y-2');
+        }, 3000);
+    } else {
+        alert('匯出失敗：' + res.message);
+    }
+}

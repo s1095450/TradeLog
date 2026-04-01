@@ -18,7 +18,9 @@ const API = {
     // 刪除記錄（支援批次）
     deleteRecords: (mode, ids) => eel.delete_records(mode, ids)(),
 
-    getHoldings: () => eel.get_holdings()(),
+    getHoldings: () => eel.get_holdings()(),//持倉
 
-    getChartData: () => eel.get_chart_data()(),
+    getChartData: () => eel.get_chart_data()(),//chart
+
+    exportCsv: (mode) => eel.export_csv(mode)(),//csv
 };

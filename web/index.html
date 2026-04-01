@@ -195,6 +195,9 @@
                                 <iconify-icon icon="solar:tag-price-bold-duotone"></iconify-icon>賣出紀錄
                             </button>
                         </div>
+                        <button id="btn-export" onclick="exportCsv()" class="px-4 py-2 bg-success/10 hover:bg-success text-success hover:text-white rounded-xl font-bold transition flex items-center gap-2 text-sm border border-success/20">
+                            <iconify-icon icon="solar:export-bold-duotone" class="text-base"></iconify-icon> 匯出 CSV
+                        </button>
                         <button onclick="deleteSelected()" id="btn-batch-delete" class="hidden px-4 py-2 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded-xl font-bold transition flex items-center gap-2 border border-danger/20">
                             <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon> 刪除選取 (<span id="selected-count">0</span>)
                         </button>
@@ -402,5 +405,7 @@
     <script>
         window.onload = () => initDashboard();
     </script>
+    <!-- Toast 提示 -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 bg-cardDark text-white text-sm font-bold px-5 py-3 rounded-2xl shadow-2xl border border-white/10 opacity-0 translate-y-2 transition-all duration-300 pointer-events-none"></div>
 </body>
 </html>

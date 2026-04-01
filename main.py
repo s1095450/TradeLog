@@ -111,6 +111,49 @@ def calculate_stock_profit(data, exclude_id=None):
 
 # ==================== Eel 暴露給前端的 API ====================
 @eel.expose
+def export_csv(mode):
+    """匯出交易紀錄為 CSV 檔案，存到使用者桌面"""
+    import csv
+    import os
+    from datetime import datetime
+
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+
+        # 檔名加上時間戳記，避免覆蓋
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+
+        if mode == 'Stock':
+            c.execute("SELECT * FROM records ORDER BY date ASC, id ASC")
+            rows = [dict(row) for row in c.fetchall()]
+            filename = os.path.join(desktop, f"TradeLog_Stock_{timestamp}.csv")
+            fieldnames = ['id', 'date', 'market', 'symbol', 'name', 'action',
+                          'qty', 'price_twd', 'price_usd', 'actual_twd', 'fee', 'profit', 'remark']
+            headers = ['ID', '日期', '市場', '代碼', '名稱', '動作',
+                       '數量', '單價(TWD)', '單價(USD)', '實際扣款(TWD)', '手續費', '盈虧', '備註']
+        else:
+            c.execute("SELECT * FROM crypto_records ORDER BY dt ASC, id ASC")
+            rows = [dict(row) for row in c.fetchall()]
+            filename = os.path.join(desktop, f"TradeLog_Crypto_{timestamp}.csv")
+            fieldnames = ['id', 'dt', 'symbol', 'action', 'price', 'profit', 'remark']
+            headers = ['ID', '時間', '幣種', '動作', '成交金額(USDT)', '盈虧(USDT)', '備註']
+
+        conn.close()
+
+        with open(filename, 'w', newline='', encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
+            for row in rows:
+                writer.writerow([row.get(k, '') for k in fieldnames])
+
+        return {"status": "success", "filename": os.path.basename(filename)}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@eel.expose
 def get_chart_data():
     """取得圖表分析所需的所有資料"""
     try:
