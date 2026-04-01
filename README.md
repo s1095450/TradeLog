@@ -11,7 +11,7 @@
 ## 技術架構
 - **後端**：Python + Eel
 - **前端**：HTML / Tailwind CSS / JavaScript / GSAP
-- **資料庫**：SQLite（本機儲存，無需帳號）
+- **資料庫**：SQLite（本機儲存）
 
 ## 使用方式
 1. 安裝依賴
