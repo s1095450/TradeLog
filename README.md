@@ -53,6 +53,12 @@ web/
 
 ## 快速開始
 
+### 方式一：直接下載（推薦）
+前往 [Releases](https://github.com/s1095450/TradeLog/releases) 下載最新版 `TradeLog.exe`，雙擊執行即可。
+
+> 需要安裝 Microsoft Edge 瀏覽器
+
+### 方式二：從原始碼執行
 **1. 安裝依賴**
 ```bash
 pip install eel
