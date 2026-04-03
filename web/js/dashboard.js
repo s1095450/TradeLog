@@ -464,7 +464,7 @@ if (dateEnd) {
 // ==================== 導覽 ====================
 
 function navigateTo(page) {
-    ['dashboard', 'holdings', 'charts'].forEach(p => {
+    ['dashboard', 'holdings', 'charts', 'stockprofit'].forEach(p => {
         document.getElementById(`page-${p}`).classList.toggle('hidden', p !== page);
         const btn = document.getElementById(`nav-${p}`);
         if (!btn) return;
@@ -474,6 +474,7 @@ function navigateTo(page) {
 
     if (page === 'holdings') initHoldings();
     if (page === 'charts')   initCharts();
+    if (page === 'stockprofit') initStockProfit();
 }
 // ==================== 匯出 CSV ====================
 

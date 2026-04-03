@@ -111,6 +111,85 @@ def calculate_stock_profit(data, exclude_id=None):
 
 # ==================== Eel 暴露給前端的 API ====================
 @eel.expose
+def get_stock_profit():
+    """取得所有個股的盈虧統計與交易明細"""
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT * FROM records ORDER BY date ASC, id ASC")
+        all_records = [dict(row) for row in c.fetchall()]
+        c.execute("SELECT * FROM crypto_records ORDER BY dt ASC, id ASC")
+        crypto_records = [dict(row) for row in c.fetchall()]
+        conn.close()
+
+        # 用 dict 追蹤每支股票/幣種
+        symbols = {}
+
+        for r in all_records:
+            key = r['symbol']
+            if key not in symbols:
+                symbols[key] = {
+                    'symbol':       r['symbol'],
+                    'name':         r.get('name') or '',
+                    'market':       r['market'],
+                    'buy_count':    0,
+                    'sell_count':   0,
+                    'total_profit': 0.0,
+                    'last_date':    r['date'],
+                    'records':      []
+                }
+            s = symbols[key]
+            if r['action'] == '買入':
+                s['buy_count'] += 1
+            else:
+                s['sell_count'] += 1
+                s['total_profit'] += float(r.get('profit') or 0)
+            s['last_date'] = r['date']
+            s['records'].append(r)
+
+        for r in crypto_records:
+            key = r['symbol']
+            if key not in symbols:
+                symbols[key] = {
+                    'symbol':       r['symbol'],
+                    'name':         r['symbol'],
+                    'market':       'Crypto',
+                    'buy_count':    0,
+                    'sell_count':   0,
+                    'total_profit': 0.0,
+                    'last_date':    r['dt'][:10].replace('-', ''),
+                    'records':      []
+                }
+            s = symbols[key]
+            if r['action'] == '買入':
+                s['buy_count'] += 1
+            else:
+                s['sell_count'] += 1
+                s['total_profit'] += float(r.get('profit') or 0)
+            s['last_date'] = r['dt'][:10].replace('-', '')
+            s['records'].append(r)
+
+        # 計算三個市場的總盈虧
+        twd_total    = sum(s['total_profit'] for s in symbols.values() if s['market'] == '台股')
+        usd_total    = sum(s['total_profit'] for s in symbols.values() if s['market'] == '美股')
+        crypto_total = sum(s['total_profit'] for s in symbols.values() if s['market'] == 'Crypto')
+
+        return {
+            "status": "success",
+            "data": {
+                "symbols": list(symbols.values()),
+                "summary": {
+                    "twd":    round(twd_total, 2),
+                    "usd":    round(usd_total, 2),
+                    "crypto": round(crypto_total, 2)
+                }
+            }
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@eel.expose
 def export_csv(mode):
     """匯出交易紀錄為 CSV 檔案，存到使用者桌面"""
     import csv

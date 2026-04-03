@@ -23,4 +23,6 @@ const API = {
     getChartData: () => eel.get_chart_data()(),//chart
 
     exportCsv: (mode) => eel.export_csv(mode)(),//csv
+
+    getStockProfit: () => eel.get_stock_profit()(),//個股盈虧
 };
