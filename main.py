@@ -372,14 +372,16 @@ def get_holdings():
                 h['total_cost'] += (price * qty + fee)
                 h['qty'] += qty
             elif r['action'] == '賣出':
+    # 先用當前均價計算賣出後的剩餘成本
+                if h['qty'] > 0:
+                    h['avg_cost'] = h['total_cost'] / h['qty']
                 h['qty'] -= qty
                 if h['qty'] < 0:
                     h['qty'] = 0.0
-
+                h['total_cost'] = h['avg_cost'] * h['qty']
             # 每次更新後重新計算均價
             if h['qty'] > 0:
                 h['avg_cost'] = h['total_cost'] / h['qty']
-                h['total_cost'] = h['avg_cost'] * h['qty']
             else:
                 h['qty'] = 0.0
                 h['avg_cost'] = 0.0
