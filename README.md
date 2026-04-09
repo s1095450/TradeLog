@@ -75,7 +75,7 @@ python main.py
 ---
 
 ## 截圖
-**v1.0.0**
+**v1.1.2**
 ![Dashboard](assets/dashboard.png)
 ![持倉總覽](assets/holdings.png)
 ![圖表分析](assets/charts.png)
