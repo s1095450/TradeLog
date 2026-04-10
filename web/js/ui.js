@@ -122,3 +122,36 @@ function flashSuccess() {
 function formatNum(val, maxDec = 2) {
     return parseFloat(parseFloat(val).toFixed(maxDec)).toLocaleString('en-US');
 }
+
+// ==================== 即時股價共用狀態 ====================
+
+let livePricesData = {};   // { symbol: { price, market } }
+let usdTwdRate = null;     // number
+let livePricesLoading = false;
+
+async function refreshLivePrices() {
+    if (livePricesLoading) return;
+    livePricesLoading = true;
+
+    // 讓所有刷新按鈕顯示 loading
+    document.querySelectorAll('.btn-refresh-price').forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = `<iconify-icon icon="solar:refresh-bold-duotone" class="animate-spin"></iconify-icon> 抓取中...`;
+    });
+
+    try {
+        const res = await API.getLivePrices();
+        if (res.status === 'success') {
+            livePricesData = res.data.prices || {};
+            usdTwdRate = res.data.usdtwd || null;
+        }
+    } catch (e) {
+        console.error('get_live_prices error:', e);
+    } finally {
+        livePricesLoading = false;
+        document.querySelectorAll('.btn-refresh-price').forEach(btn => {
+            btn.disabled = false;
+            btn.innerHTML = `<iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 刷新股價`;
+        });
+    }
+}

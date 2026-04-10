@@ -84,7 +84,7 @@ def calculate_stock_profit(data, exclude_id=None):
         r_price = float(r.get('price_twd') or 0) if r.get('market') == '台股' else float(r.get('price_usd') or 0)
 
         if r['action'] == '買入':
-            total_cost_basis += (r_price * r_qty + r_fee)
+            total_cost_basis += (r_price * r_qty)
             current_holdings += r_qty
             if current_holdings > 0:
                 avg_cost = total_cost_basis / current_holdings
@@ -104,7 +104,7 @@ def calculate_stock_profit(data, exclude_id=None):
         raise ValueError(f"庫存不足！目前 {symbol} 剩餘庫存僅 {round(current_holdings, 2)} 股")
 
     # 本次賣出盈虧 = (賣出單價 - 當前 avg_cost) * 賣出數量 - 賣出手續費
-    calculated_profit = (new_price - avg_cost) * new_qty - new_fee
+    calculated_profit = (new_price - avg_cost) * new_qty
     data['profit'] = round(calculated_profit, 2)
 
     return data
@@ -369,7 +369,7 @@ def get_holdings():
             h = holdings[symbol]
 
             if r['action'] == '買入':
-                h['total_cost'] += (price * qty + fee)
+                h['total_cost'] += (price * qty)
                 h['qty'] += qty
             elif r['action'] == '賣出':
     # 先用當前均價計算賣出後的剩餘成本
@@ -505,10 +505,50 @@ def delete_records(mode, record_ids):
         return {"status": "error", "message": str(e)}
 
 
+# ==================== 即時股價 ====================
+
+@eel.expose
+def get_live_prices():
+    """用 yfinance 抓持倉股票最新股價與 USD/TWD 匯率"""
+    try:
+        import yfinance as yf
+
+        holdings_res = get_holdings()
+        if holdings_res['status'] != 'success':
+            return {"status": "error", "message": "無法取得持倉資料"}
+
+        holdings = holdings_res['data']
+        if not holdings:
+            return {"status": "success", "data": {"prices": {}, "usdtwd": None}}
+
+        prices = {}
+        for h in holdings:
+            symbol = h['symbol']
+            market = h['market']
+            yf_symbol = symbol + '.TW' if market == '台股' else symbol
+            try:
+                price = yf.Ticker(yf_symbol).fast_info.last_price
+                prices[symbol] = {"price": round(float(price), 4) if price else None, "market": market}
+            except Exception:
+                prices[symbol] = {"price": None, "market": market}
+
+        # USD/TWD 匯率
+        usdtwd = None
+        try:
+            usdtwd = round(float(yf.Ticker('USDTWD=X').fast_info.last_price), 4)
+        except Exception:
+            pass
+
+        return {"status": "success", "data": {"prices": prices, "usdtwd": usdtwd}}
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 # ==================== 啟動 ====================
 
 if __name__ == '__main__':
     init_db()  # 確保資料表存在
-    print("🚀 TradeLog Pro 啟動中...")
+    print("TradeLog Pro starting...")
     eel.start('index.html', size=(1500, 950), mode='edge', port=0,
               cmdline_args=['--disable-http-cache', '--incognito'])

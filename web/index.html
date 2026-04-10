@@ -274,7 +274,7 @@
 
         <!-- ── Dashboard 頁 ── -->
         <div id="page-dashboard" class="flex flex-col h-full">
-            <div class="grid grid-cols-3 gap-6 mb-6" id="stats-cards">
+            <div class="grid grid-cols-3 gap-4 mb-3" id="stats-cards">
                 <div class="glass rounded-3xl p-6 shadow-xl relative overflow-hidden group">
                     <div
                         class="absolute -right-6 -top-6 w-32 h-32 bg-blue-500 rounded-full opacity-10 blur-3xl group-hover:opacity-20 transition">
@@ -316,6 +316,32 @@
                         <iconify-icon icon="ic:twotone-currency-bitcoin"
                             class="text-6xl flex-shrink-0 text-crypto opacity-80 group-hover:scale-110 transition-transform"></iconify-icon>
                     </div>
+                </div>
+            </div>
+
+            <!-- 未實現盈虧列 -->
+            <div class="grid grid-cols-2 gap-4 mb-3">
+                <div class="glass rounded-2xl px-5 py-3 shadow flex items-center gap-4 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-blue-500 rounded-full opacity-10 blur-2xl"></div>
+                    <iconify-icon icon="solar:chart-2-bold-duotone" class="text-primary text-3xl flex-shrink-0"></iconify-icon>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-bold">台股未實現盈虧</div>
+                        <div class="text-xl font-extrabold table-num text-gray-400" id="dash-tw-unrealized">--</div>
+                    </div>
+                    <button onclick="refreshDashboardLivePrices()"
+                        class="btn-refresh-price px-3 py-1.5 bg-success/10 hover:bg-success/20 text-success rounded-xl font-bold transition flex items-center gap-1.5 text-xs border border-success/20 flex-shrink-0">
+                        <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 刷新股價
+                    </button>
+                </div>
+                <div class="glass rounded-2xl px-5 py-3 shadow flex items-center gap-4 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-20 h-20 bg-purple-500 rounded-full opacity-10 blur-2xl"></div>
+                    <iconify-icon icon="solar:dollar-minimalistic-bold-duotone" class="text-purple-400 text-3xl flex-shrink-0"></iconify-icon>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-bold">美股未實現盈虧</div>
+                        <div class="text-xl font-extrabold table-num text-gray-400" id="dash-us-unrealized-usd">--</div>
+                        <div class="text-xs table-num text-gray-400" id="dash-us-unrealized-twd"></div>
+                    </div>
+                    <div class="text-xs text-gray-400 flex-shrink-0" id="dash-usdtwd-rate"></div>
                 </div>
             </div>
 
@@ -392,37 +418,66 @@
                     <h1 class="text-xl font-extrabold">持倉總覽</h1>
                     <p class="text-xs text-gray-500 dark:text-gray-400">目前持有部位 · 移動平均成本法</p>
                 </div>
-                <button onclick="refreshHoldings()"
-                    class="ml-auto px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl font-bold transition flex items-center gap-2 text-sm border border-primary/20">
-                    <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 重新整理
-                </button>
+                <div class="ml-auto flex gap-2">
+                    <button onclick="refreshHoldingsPrice()"
+                        class="btn-refresh-price px-4 py-2 bg-success/10 hover:bg-success/20 text-success rounded-xl font-bold transition flex items-center gap-2 text-sm border border-success/20">
+                        <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 刷新股價
+                    </button>
+                    <button onclick="refreshHoldings()"
+                        class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl font-bold transition flex items-center gap-2 text-sm border border-primary/20">
+                        <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 重新整理
+                    </button>
+                </div>
             </div>
-            <div class="grid grid-cols-4 gap-4" id="holdings-container">
+            <!-- 摘要卡片：2x2 對稱排列 -->
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-4" id="holdings-container">
+                <!-- 台股持倉數 -->
                 <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500 rounded-full opacity-10 blur-2xl"></div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">台股持倉數</p>
-                    <div class="text-3xl font-extrabold text-primary" id="h-tw-count">0</div>
-                    <p class="text-xs text-gray-400 mt-1">支股票</p>
-                </div>
-                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500 rounded-full opacity-10 blur-2xl">
+                    <div class="flex items-center gap-2 mb-3">
+                        <iconify-icon icon="solar:chart-2-bold-duotone" class="text-primary text-lg"></iconify-icon>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold">台股持倉</p>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">美股持倉數</p>
-                    <div class="text-3xl font-extrabold text-purple-400" id="h-us-count">0</div>
-                    <p class="text-xs text-gray-400 mt-1">支股票</p>
-                </div>
-                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500 rounded-full opacity-10 blur-2xl"></div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">台股總成本</p>
-                    <div class="text-2xl font-extrabold text-primary table-num" id="h-tw-cost">$0</div>
-                    <p class="text-xs text-gray-400 mt-1">TWD</p>
-                </div>
-                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
-                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500 rounded-full opacity-10 blur-2xl">
+                    <div class="flex items-end gap-2">
+                        <div class="text-3xl font-extrabold text-primary" id="h-tw-count">0</div>
+                        <div class="text-xs text-gray-400 mb-1">支股票</div>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 font-bold mb-2">美股總成本</p>
-                    <div class="text-2xl font-extrabold text-purple-400 table-num" id="h-us-cost">$0.00</div>
-                    <p class="text-xs text-gray-400 mt-1">USD</p>
+                    <div class="text-sm font-bold text-primary table-num mt-2" id="h-tw-cost">$0 TWD</div>
+                </div>
+                <!-- 美股持倉數 -->
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500 rounded-full opacity-10 blur-2xl"></div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <iconify-icon icon="solar:chart-bold-duotone" class="text-purple-400 text-lg"></iconify-icon>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold">美股持倉</p>
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <div class="text-3xl font-extrabold text-purple-400" id="h-us-count">0</div>
+                        <div class="text-xs text-gray-400 mb-1">支股票</div>
+                    </div>
+                    <div class="text-sm font-bold text-purple-400 table-num mt-2" id="h-us-cost">$0.00 USD</div>
+                </div>
+                <!-- 台股未實現盈虧 -->
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-500 rounded-full opacity-10 blur-2xl"></div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <iconify-icon icon="solar:graph-up-bold-duotone" class="text-success text-lg"></iconify-icon>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold">台股未實現盈虧</p>
+                    </div>
+                    <div class="text-xl font-extrabold table-num text-gray-400" id="h-tw-unrealized">--</div>
+                </div>
+                <!-- 美股未實現盈虧 -->
+                <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-purple-500 rounded-full opacity-10 blur-2xl"></div>
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <iconify-icon icon="solar:dollar-minimalistic-bold-duotone" class="text-purple-400 text-lg"></iconify-icon>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-bold">美股未實現盈虧</p>
+                        </div>
+                        <div class="text-xs text-gray-400" id="h-usdtwd-rate"></div>
+                    </div>
+                    <div class="text-xl font-extrabold table-num text-gray-400" id="h-us-unrealized-usd">--</div>
+                    <div class="text-xs table-num text-gray-400 mt-0.5" id="h-us-unrealized-twd"></div>
                 </div>
             </div>
             <div class="flex-1 glass rounded-3xl flex flex-col overflow-hidden shadow-xl">

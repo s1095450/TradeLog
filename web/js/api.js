@@ -25,4 +25,6 @@ const API = {
     exportCsv: (mode) => eel.export_csv(mode)(),//csv
 
     getStockProfit: () => eel.get_stock_profit()(),//個股盈虧
+
+    getLivePrices: () => eel.get_live_prices()(),//即時股價
 };

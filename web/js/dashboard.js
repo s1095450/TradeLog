@@ -24,6 +24,7 @@ async function initDashboard() {
     renderForm();
     initSearchPickers();
     await refreshData();
+    refreshDashboardLivePrices();
 }
 
 // ==================== 資料刷新 ====================
@@ -530,4 +531,55 @@ function clearDateFilter() {
     fpSearch.forEach(fp => fp.clear());
     document.getElementById('btn-clear-date').classList.add('hidden');
     renderTable();
+}
+
+// ==================== Dashboard 未實現盈虧 ====================
+
+async function refreshDashboardLivePrices() {
+    await refreshLivePrices();
+    updateDashboardUnrealized();
+}
+
+function updateDashboardUnrealized() {
+    // 需要持倉資料才能計算，直接從後端取
+    API.getHoldings().then(res => {
+        if (res.status !== 'success') return;
+        const holdings = res.data;
+
+        let twUnrealized = 0;
+        let usUnrealizedUsd = 0;
+
+        holdings.forEach(h => {
+            const lp = livePricesData[h.symbol];
+            if (!lp || lp.price == null) return;
+            const unrealized = (lp.price - h.avg_cost) * h.qty;
+            if (h.market === '台股') twUnrealized += unrealized;
+            else if (h.market === '美股') usUnrealizedUsd += unrealized;
+        });
+
+        const twEl       = document.getElementById('dash-tw-unrealized');
+        const usUsdEl    = document.getElementById('dash-us-unrealized-usd');
+        const usTwdEl    = document.getElementById('dash-us-unrealized-twd');
+        const rateEl     = document.getElementById('dash-usdtwd-rate');
+
+        if (twEl) {
+            const sign = twUnrealized >= 0 ? '+' : '';
+            twEl.innerText = `${sign}${formatNum(twUnrealized, 0)} TWD`;
+            twEl.className = `text-xl font-extrabold table-num ${twUnrealized >= 0 ? 'text-success' : 'text-danger'}`;
+        }
+        if (usUsdEl) {
+            const sign = usUnrealizedUsd >= 0 ? '+' : '';
+            usUsdEl.innerText = `${sign}${formatNum(usUnrealizedUsd)} USD`;
+            usUsdEl.className = `text-xl font-extrabold table-num ${usUnrealizedUsd >= 0 ? 'text-success' : 'text-danger'}`;
+        }
+        if (usTwdEl && usdTwdRate) {
+            const twd  = usUnrealizedUsd * usdTwdRate;
+            const sign = twd >= 0 ? '+' : '';
+            usTwdEl.innerText = `≈ ${sign}${formatNum(twd, 0)} TWD`;
+            usTwdEl.className = `text-xs table-num ${twd >= 0 ? 'text-success/70' : 'text-danger/70'}`;
+        }
+        if (rateEl && usdTwdRate) {
+            rateEl.innerText = `匯率 ${usdTwdRate.toFixed(2)}`;
+        }
+    });
 }
