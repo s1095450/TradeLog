@@ -3,23 +3,35 @@
 
 // ==================== 主題切換 ====================
 
-let isDarkMode = true;
+let isDarkMode = localStorage.getItem('theme') !== 'light';
+
+function applyTheme() {
+    const html = document.documentElement;
+    const icon = document.getElementById('theme-icon');
+    if (isDarkMode) {
+        html.classList.add('dark');
+        document.getElementById('flatpickr-theme').href = "https://npmcdn.com/flatpickr/dist/themes/dark.css";
+    } else {
+        html.classList.remove('dark');
+        document.getElementById('flatpickr-theme').href = "https://npmcdn.com/flatpickr/dist/themes/light.css";
+    }
+    if (icon) icon.setAttribute('icon', isDarkMode ? 'solar:moon-stars-bold-duotone' : 'solar:sun-bold-duotone');
+}
 
 function toggleTheme() {
     isDarkMode = !isDarkMode;
-    const html = document.documentElement;
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
     const icon = document.getElementById('theme-icon');
-
-    document.getElementById('flatpickr-theme').href = isDarkMode
-        ? "https://npmcdn.com/flatpickr/dist/themes/dark.css"
-        : "https://npmcdn.com/flatpickr/dist/themes/light.css";
 
     gsap.to(icon, {
         rotation: "+=360", scale: 0, duration: 0.25,
         onComplete: () => {
-            html.classList.toggle('dark');
-            icon.setAttribute('icon', isDarkMode ? 'solar:moon-stars-bold-duotone' : 'solar:sun-bold-duotone');
+            applyTheme();
             gsap.to(icon, { scale: 1, duration: 0.4, ease: "back.out(1.5)" });
+            // 若圖表頁在顯示中，重新繪製以套用新主題顏色
+            if (!document.getElementById('page-charts').classList.contains('hidden')) {
+                refreshCharts();
+            }
         }
     });
 }
@@ -108,6 +120,27 @@ function closeAllDropdowns(exceptId = null) {
     });
 }
 
+// ==================== Toast 提示 ====================
+
+function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    const colors = {
+        success: 'bg-success/90 text-white',
+        error:   'bg-danger/90 text-white',
+        info:    'bg-cardDark text-white',
+    };
+    toast.className = `fixed bottom-6 right-6 z-50 text-sm font-bold px-5 py-3 rounded-2xl shadow-2xl border border-white/10 transition-all duration-300 pointer-events-none ${colors[type] || colors.info}`;
+    toast.innerText = msg;
+    toast.classList.remove('opacity-0', 'translate-y-2');
+    toast.classList.add('opacity-100', 'translate-y-0');
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+    }, 3500);
+}
+
 // ==================== 成功動畫 ====================
 
 function flashSuccess() {
@@ -128,6 +161,7 @@ function formatNum(val, maxDec = 2) {
 let livePricesData = {};   // { symbol: { price, market } }
 let usdTwdRate = null;     // number
 let livePricesLoading = false;
+let livePricesUpdatedAt = null;  // Date
 
 async function refreshLivePrices() {
     if (livePricesLoading) return;
@@ -143,10 +177,21 @@ async function refreshLivePrices() {
         const res = await API.getLivePrices();
         if (res.status === 'success') {
             livePricesData = res.data.prices || {};
-            usdTwdRate = res.data.usdtwd || null;
+            usdTwdRate = res.data.usdtwd != null ? res.data.usdtwd : null;
+            livePricesUpdatedAt = new Date();
+            updatePriceSourceLabels();
+            const fetched = Object.values(livePricesData).filter(p => p.price != null).length;
+            const total   = Object.keys(livePricesData).length;
+            if (total > 0 && fetched === 0) {
+                showToast('股價抓取失敗，請確認網路連線', 'error');
+            } else if (fetched < total) {
+                showToast(`部分股價無法取得 (${fetched}/${total})`, 'info');
+            }
+        } else {
+            showToast(`股價抓取失敗：${res.message || '未知錯誤'}`, 'error');
         }
     } catch (e) {
-        console.error('get_live_prices error:', e);
+        showToast('股價抓取失敗，請確認網路連線', 'error');
     } finally {
         livePricesLoading = false;
         document.querySelectorAll('.btn-refresh-price').forEach(btn => {
@@ -154,4 +199,14 @@ async function refreshLivePrices() {
             btn.innerHTML = `<iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 刷新股價`;
         });
     }
+}
+
+function updatePriceSourceLabels() {
+    if (!livePricesUpdatedAt) return;
+    const timeStr = livePricesUpdatedAt.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const html = `<iconify-icon icon="solar:database-bold-duotone" class="text-xs"></iconify-icon>
+        Yahoo Finance &nbsp;·&nbsp;
+        <iconify-icon icon="solar:clock-circle-bold-duotone" class="text-xs"></iconify-icon>
+        ${timeStr}`;
+    document.querySelectorAll('.price-source-label').forEach(el => el.innerHTML = html);
 }

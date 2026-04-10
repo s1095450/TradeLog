@@ -10,9 +10,6 @@ let holdingsSortAsc = true;
 async function initHoldings() {
     gsap.from("#holdings-container", { y: 30, opacity: 0, duration: 0.8, ease: "power3.out" });
     await refreshHoldings();
-    await refreshLivePrices();
-    renderHoldingsTable();
-    updateUnrealizedCards();
 }
 
 // ==================== 資料刷新 ====================
@@ -24,6 +21,11 @@ async function refreshHoldings() {
     holdingsData = res.data;
     renderHoldingsSummary();
     renderHoldingsTable();
+
+    // 同步刷新股價（確保新增的持倉也能立即顯示最新價）
+    await refreshLivePrices();
+    renderHoldingsTable();
+    updateUnrealizedCards();
 }
 
 // ==================== 刷新股價（持倉頁專用） ====================

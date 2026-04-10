@@ -10,6 +10,9 @@ let sortCol = 'id';
 let sortAsc = false;
 let selectedRows = new Set();
 let fpInstance = null;
+let pageSize = 20;
+let currentPage = 1;
+let currentPageIds = [];
 
 // ==================== 初始化 ====================
 
@@ -77,6 +80,13 @@ function setViewMarket(market) {
     selectedRows.clear();
     updateBatchDeleteButton();
 
+    // 切換市場時清除搜尋與日期篩選
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) searchInput.value = '';
+    document.getElementById('btn-clear-search')?.classList.add('hidden');
+    if (fpSearch.length) fpSearch.forEach(fp => fp.clear());
+    document.getElementById('btn-clear-date')?.classList.add('hidden');
+
     const activeClass = "px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-sm text-white dark:text-bgDark ";
     const inactiveClass = "px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-all bg-transparent";
 
@@ -91,6 +101,7 @@ function setTableTab(tab) {
     selectedRows.clear();
     updateBatchDeleteButton();
     tableTab = tab;
+    currentPage = 1;
 
     const activeClass = 'px-5 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark text-primary font-bold transition flex items-center gap-1.5 shadow-sm border border-gray-200 dark:border-gray-600';
     const inactiveClass = 'px-5 py-2 rounded-xl text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-inputBgDark transition flex items-center gap-1.5 border border-transparent';
@@ -193,6 +204,32 @@ function renderForm() {
     });
 }
 
+// ==================== 欄位驗證 ====================
+
+function showFieldError(fieldId, message) {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+
+    input.classList.add('!border-danger');
+
+    let errorEl = document.getElementById(`${fieldId}-error`);
+    if (!errorEl) {
+        errorEl = document.createElement('p');
+        errorEl.id = `${fieldId}-error`;
+        input.parentNode.appendChild(errorEl);
+    }
+    errorEl.className = 'text-danger text-xs mt-1 ml-1 flex items-center gap-1';
+    errorEl.innerHTML = `<iconify-icon icon="solar:danger-triangle-bold-duotone" class="text-sm flex-shrink-0"></iconify-icon>${message}`;
+
+    input.addEventListener('input', () => clearFieldError(fieldId), { once: true });
+}
+
+function clearFieldError(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (input) input.classList.remove('!border-danger');
+    document.getElementById(`${fieldId}-error`)?.remove();
+}
+
 // ==================== 儲存 / 編輯 / 取消 ====================
 
 async function saveRecord() {
@@ -201,26 +238,44 @@ async function saveRecord() {
 
     try {
         if (isStockMode) {
+            const symbol = document.getElementById('f_symbol').value.trim();
+            const qty    = parseFloat(document.getElementById('f_qty').value);
+            const price  = parseFloat(document.getElementById('f_price').value);
+
+            let valid = true;
+            if (!symbol)      { showFieldError('f_symbol', '請輸入股票代碼'); valid = false; }
+            if (!(qty  > 0))  { showFieldError('f_qty',    '數量必須大於 0'); valid = false; }
+            if (!(price > 0)) { showFieldError('f_price',  '單價必須大於 0'); valid = false; }
+            if (!valid) return;
+
             data = {
                 date: document.getElementById('f_date').value,
                 market: inputMarket,
-                symbol: document.getElementById('f_symbol').value.toUpperCase(),
+                symbol: symbol.toUpperCase(),
                 name: document.getElementById('f_name').value,
                 action: document.getElementById('f_action').value,
-                qty: parseFloat(document.getElementById('f_qty').value || 0),
-                price_twd: inputMarket === '台股' ? parseFloat(document.getElementById('f_price').value || 0) : 0,
-                price_usd: inputMarket === '美股' ? parseFloat(document.getElementById('f_price').value || 0) : 0,
+                qty: qty,
+                price_twd: inputMarket === '台股' ? price : 0,
+                price_usd: inputMarket === '美股' ? price : 0,
                 actual_twd: parseFloat(document.getElementById('f_actual_twd').value || 0),
                 fee: parseFloat(document.getElementById('f_fee').value || 0),
                 profit: 0,
                 remark: document.getElementById('f_remark').value
             };
         } else {
+            const cSymbol = document.getElementById('f_c_symbol').value.trim();
+            const cPrice  = parseFloat(document.getElementById('f_c_price').value);
+
+            let valid = true;
+            if (!cSymbol)      { showFieldError('f_c_symbol', '請輸入幣種代碼'); valid = false; }
+            if (!(cPrice > 0)) { showFieldError('f_c_price',  '成交金額必須大於 0'); valid = false; }
+            if (!valid) return;
+
             data = {
                 dt: document.getElementById('f_dt').value,
-                symbol: document.getElementById('f_c_symbol').value.toUpperCase(),
+                symbol: cSymbol.toUpperCase(),
                 action: document.getElementById('f_c_action').value,
-                price: parseFloat(document.getElementById('f_c_price').value || 0),
+                price: cPrice,
                 profit: parseFloat(document.getElementById('f_c_profit').value || 0),
                 remark: document.getElementById('f_c_remark').value
             };
@@ -318,6 +373,7 @@ async function deleteSelected() {
 function handleSort(col) {
     if (sortCol === col) sortAsc = !sortAsc;
     else { sortCol = col; sortAsc = false; }
+    currentPage = 1;
     renderTable();
 }
 
@@ -329,10 +385,8 @@ function toggleRowSelection(cb) {
 }
 
 function toggleSelectAll(cb) {
-    let displayData = allRecords.filter(r => r.action === tableTab);
-    if (viewMarket !== 'Crypto') displayData = displayData.filter(r => r.market === viewMarket);
-    if (cb.checked) displayData.forEach(r => selectedRows.add(r.id));
-    else selectedRows.clear();
+    if (cb.checked) currentPageIds.forEach(id => selectedRows.add(id));
+    else currentPageIds.forEach(id => selectedRows.delete(id));
     renderTable();
     updateBatchDeleteButton();
 }
@@ -395,7 +449,15 @@ if (dateEnd) {
         return sortAsc ? valA - valB : valB - valA;
     });
 
-    const allChecked = displayData.length > 0 && displayData.every(r => selectedRows.has(r.id));
+    // ── 分頁 ──
+    const totalItems = displayData.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIdx = (currentPage - 1) * pageSize;
+    const pagedData = displayData.slice(startIdx, startIdx + pageSize);
+    currentPageIds = pagedData.map(r => r.id);
+
+    const allChecked = pagedData.length > 0 && pagedData.every(r => selectedRows.has(r.id));
     const chkHead = `<th class="px-4 py-3 w-10 text-center"><input type="checkbox" onclick="toggleSelectAll(this)" ${allChecked ? 'checked' : ''}></th>`;
     const tdText = "px-3 py-3 whitespace-nowrap text-center text-gray-700 dark:text-gray-200";
     const tdNum = "px-3 py-3 whitespace-nowrap text-center table-num text-gray-700 dark:text-gray-200";
@@ -412,7 +474,7 @@ if (dateEnd) {
             <th class="px-3 py-3 text-center whitespace-nowrap">操作</th>
         </tr>`;
 
-        displayData.forEach(row => {
+        pagedData.forEach(row => {
             const price = viewMarket === '台股' ? row.price_twd : row.price_usd;
             const pColor = row.profit > 0 ? 'text-success' : (row.profit < 0 ? 'text-danger' : 'text-gray-500 dark:text-gray-400');
             const isChecked = selectedRows.has(row.id) ? 'checked' : '';
@@ -444,7 +506,7 @@ if (dateEnd) {
             <th class="px-3 py-3 text-center whitespace-nowrap">操作</th>
         </tr>`;
 
-        displayData.forEach(row => {
+        pagedData.forEach(row => {
             const pColor = row.profit > 0 ? 'text-success' : (row.profit < 0 ? 'text-danger' : 'text-gray-500 dark:text-gray-400');
             const isChecked = selectedRows.has(row.id) ? 'checked' : '';
             body.innerHTML += `
@@ -462,7 +524,77 @@ if (dateEnd) {
                 </tr>`;
         });
     }
+
+    renderPaginationBar(totalItems, totalPages);
 }
+
+// ==================== 分頁 ====================
+
+function renderPaginationBar(totalItems, totalPages) {
+    const bar = document.getElementById('pagination-bar');
+    if (!bar) return;
+
+    if (totalItems === 0) { bar.innerHTML = ''; return; }
+
+    const btnBase = 'min-w-[32px] h-8 px-2 rounded-lg text-xs font-bold transition-colors';
+    const btnActive = `${btnBase} bg-primary text-white dark:text-bgDark`;
+    const btnInactive = `${btnBase} text-gray-500 dark:text-gray-400 hover:bg-inputBgLight dark:hover:bg-inputBgDark`;
+    const btnDisabled = `${btnBase} text-gray-300 dark:text-gray-600 cursor-not-allowed`;
+
+    // 頁碼按鈕（最多顯示 5 頁，超過用 ...）
+    let pageButtons = '';
+    const delta = 2;
+    const start = Math.max(1, currentPage - delta);
+    const end = Math.min(totalPages, currentPage + delta);
+
+    if (start > 1) {
+        pageButtons += `<button onclick="goToPage(1)" class="${1 === currentPage ? btnActive : btnInactive}">1</button>`;
+        if (start > 2) pageButtons += `<span class="text-gray-400 text-xs px-1">…</span>`;
+    }
+    for (let i = start; i <= end; i++) {
+        pageButtons += `<button onclick="goToPage(${i})" class="${i === currentPage ? btnActive : btnInactive}">${i}</button>`;
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) pageButtons += `<span class="text-gray-400 text-xs px-1">…</span>`;
+        pageButtons += `<button onclick="goToPage(${totalPages})" class="${totalPages === currentPage ? btnActive : btnInactive}">${totalPages}</button>`;
+    }
+
+    const sizeOptions = [10, 20, 50].map(n =>
+        `<option value="${n}" ${pageSize === n ? 'selected' : ''}>${n} 筆／頁</option>`
+    ).join('');
+
+    const startCount = (currentPage - 1) * pageSize + 1;
+    const endCount = Math.min(currentPage * pageSize, totalItems);
+
+    bar.innerHTML = `
+        <span class="text-xs text-gray-400">${startCount}–${endCount} / 共 ${totalItems} 筆</span>
+        <div class="flex items-center gap-1">
+            <button onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="${currentPage <= 1 ? btnDisabled : btnInactive}">‹</button>
+            ${pageButtons}
+            <button onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="${currentPage >= totalPages ? btnDisabled : btnInactive}">›</button>
+        </div>
+        <select onchange="setPageSize(this.value)"
+            class="text-xs font-bold bg-inputBgLight dark:bg-inputBgDark text-gray-600 dark:text-gray-300 rounded-lg px-2 h-8 border border-transparent outline-none cursor-pointer">
+            ${sizeOptions}
+        </select>`;
+}
+
+function goToPage(page) {
+    currentPage = page;
+    renderTable();
+}
+
+function setPageSize(size) {
+    pageSize = parseInt(size);
+    currentPage = 1;
+    renderTable();
+}
+
+function onSearchInput() {
+    currentPage = 1;
+    renderTable();
+}
+
 // ==================== 導覽 ====================
 
 function navigateTo(page) {
@@ -494,17 +626,9 @@ async function exportCsv() {
     btn.innerHTML = `<iconify-icon icon="solar:export-bold-duotone" class="text-base"></iconify-icon> 匯出 CSV`;
 
     if (res.status === 'success') {
-        // 成功提示
-        const toast = document.getElementById('toast');
-        toast.innerText = `✅ 已匯出至桌面：${res.filename}`;
-        toast.classList.remove('opacity-0', 'translate-y-2');
-        toast.classList.add('opacity-100', 'translate-y-0');
-        setTimeout(() => {
-            toast.classList.remove('opacity-100', 'translate-y-0');
-            toast.classList.add('opacity-0', 'translate-y-2');
-        }, 3000);
+        showToast(`已匯出至桌面：${res.filename}`, 'success');
     } else {
-        alert('匯出失敗：' + res.message);
+        showToast(`匯出失敗：${res.message}`, 'error');
     }
 }
 // ==================== 搜尋/篩選 ====================

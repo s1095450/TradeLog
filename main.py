@@ -109,6 +109,40 @@ def calculate_stock_profit(data, exclude_id=None):
 
     return data
 
+def recalculate_symbol_profits(symbol, conn):
+    """修改或刪除紀錄後，重新對帳該股票所有賣出的盈虧"""
+    c = conn.cursor()
+    c.execute(
+        "SELECT * FROM records WHERE symbol = ? ORDER BY date ASC, id ASC",
+        (symbol,)
+    )
+    all_records = [dict(row) for row in c.fetchall()]
+
+    current_holdings = 0.0
+    total_cost_basis  = 0.0
+    avg_cost          = 0.0
+
+    for r in all_records:
+        qty   = float(r.get('qty')       or 0)
+        price = float(r.get('price_twd') or 0) if r.get('market') == '台股' \
+                else float(r.get('price_usd') or 0)
+
+        if r['action'] == '買入':
+            total_cost_basis += price * qty
+            current_holdings += qty
+            if current_holdings > 0:
+                avg_cost = total_cost_basis / current_holdings
+        elif r['action'] == '賣出':
+            new_profit = round((price - avg_cost) * qty, 2)
+            c.execute("UPDATE records SET profit = ? WHERE id = ?", (new_profit, r['id']))
+            current_holdings -= qty
+            if current_holdings < 0:
+                current_holdings = 0.0
+            total_cost_basis = current_holdings * avg_cost
+
+    conn.commit()
+
+
 # ==================== Eel 暴露給前端的 API ====================
 @eel.expose
 def get_stock_profit():
@@ -482,6 +516,11 @@ def update_record(mode, record_id, data):
 
         c.execute(f"UPDATE {table} SET {set_clause} WHERE id = ?", values)
         conn.commit()
+
+        # 修改後重新對帳該股票所有賣出盈虧（確保後續賣出同步更新）
+        if mode == 'Stock':
+            recalculate_symbol_profits(data['symbol'], conn)
+
         conn.close()
         return {"status": "success"}
     except ValueError as ve:
@@ -497,8 +536,20 @@ def delete_records(mode, record_ids):
         conn = get_conn()
         c = conn.cursor()
         placeholders = ', '.join(['?' for _ in record_ids])
+
+        # 刪除前先記錄受影響的股票代碼（Stock 模式才需要重算）
+        affected_symbols = set()
+        if mode == 'Stock':
+            c.execute(f"SELECT DISTINCT symbol FROM {table} WHERE id IN ({placeholders})", record_ids)
+            affected_symbols = {row['symbol'] for row in c.fetchall()}
+
         c.execute(f"DELETE FROM {table} WHERE id IN ({placeholders})", record_ids)
         conn.commit()
+
+        # 刪除後重新對帳受影響的股票
+        for symbol in affected_symbols:
+            recalculate_symbol_profits(symbol, conn)
+
         conn.close()
         return {"status": "success"}
     except Exception as e:
@@ -509,9 +560,10 @@ def delete_records(mode, record_ids):
 
 @eel.expose
 def get_live_prices():
-    """用 yfinance 抓持倉股票最新股價與 USD/TWD 匯率"""
+    """用 yfinance 平行批次抓持倉股票最新股價與 USD/TWD 匯率"""
     try:
         import yfinance as yf
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
         holdings_res = get_holdings()
         if holdings_res['status'] != 'success':
@@ -521,23 +573,31 @@ def get_live_prices():
         if not holdings:
             return {"status": "success", "data": {"prices": {}, "usdtwd": None}}
 
-        prices = {}
+        # 建立待抓清單：(user_symbol, yf_symbol, market)
+        fetch_list = []
         for h in holdings:
-            symbol = h['symbol']
-            market = h['market']
-            yf_symbol = symbol + '.TW' if market == '台股' else symbol
-            try:
-                price = yf.Ticker(yf_symbol).fast_info.last_price
-                prices[symbol] = {"price": round(float(price), 4) if price else None, "market": market}
-            except Exception:
-                prices[symbol] = {"price": None, "market": market}
+            yf_sym = h['symbol'] + '.TW' if h['market'] == '台股' else h['symbol']
+            fetch_list.append((h['symbol'], yf_sym, h['market']))
+        fetch_list.append(('__USDTWD__', 'USDTWD=X', None))
 
-        # USD/TWD 匯率
+        def fetch_one(args):
+            user_sym, yf_sym, market = args
+            try:
+                price = yf.Ticker(yf_sym).fast_info.last_price
+                return user_sym, round(float(price), 4) if price else None, market
+            except Exception:
+                return user_sym, None, market
+
+        prices = {}
         usdtwd = None
-        try:
-            usdtwd = round(float(yf.Ticker('USDTWD=X').fast_info.last_price), 4)
-        except Exception:
-            pass
+
+        # 所有請求同時發出，總耗時 ≈ 單次最慢的那一支
+        with ThreadPoolExecutor(max_workers=len(fetch_list)) as executor:
+            for user_sym, price, market in executor.map(fetch_one, fetch_list):
+                if user_sym == '__USDTWD__':
+                    usdtwd = price
+                else:
+                    prices[user_sym] = {"price": price, "market": market}
 
         return {"status": "success", "data": {"prices": prices, "usdtwd": usdtwd}}
 

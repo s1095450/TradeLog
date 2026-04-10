@@ -18,7 +18,6 @@ async function initStockProfit() {
 
 async function refreshStockProfit() {
     const res = await API.getStockProfit();
-    console.log('getStockProfit res:', res);
     if (res.status !== 'success') return;
 
     stockProfitData = res.data.symbols;
@@ -43,20 +42,25 @@ async function refreshStockProfit() {
 
 // ==================== 排序 ====================
 
+const SP_SORT_LABELS = { last_date: '最後交易日', total_profit: '盈虧金額', symbol: '代碼' };
+
 function spSort(col) {
     if (spSortCol === col) spSortAsc = !spSortAsc;
     else { spSortCol = col; spSortAsc = false; }
 
-    // 更新排序按鈕樣式
+    // 更新排序按鈕樣式與方向箭頭
     ['last_date', 'total_profit', 'symbol'].forEach(c => {
         const btn = document.getElementById(`sp-sort-${c}`);
         if (!btn) return;
         if (c === spSortCol) {
             btn.classList.add('bg-primary/20', 'text-primary');
             btn.classList.remove('text-gray-400');
+            const arrow = spSortAsc ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold';
+            btn.innerHTML = `${SP_SORT_LABELS[c]} <iconify-icon icon="${arrow}" class="text-sm align-middle"></iconify-icon>`;
         } else {
             btn.classList.remove('bg-primary/20', 'text-primary');
             btn.classList.add('text-gray-400');
+            btn.innerHTML = SP_SORT_LABELS[c];
         }
     });
 
@@ -127,8 +131,8 @@ function renderStockProfitList() {
                                 <iconify-icon icon="${actionIcon}"></iconify-icon>${r.action}
                             </span>
                         </td>
-                        <td class="px-4 py-2.5 text-center text-xs table-num">${parseFloat(r.qty || 0).toLocaleString('en-US', { maximumFractionDigits: 4 })} 股</td>
-                        <td class="px-4 py-2.5 text-center text-xs table-num">${formatNum(price)} ${currency}</td>
+                        <td class="px-4 py-2.5 text-center text-xs table-num">${s.market === 'Crypto' ? '<span class="text-gray-400">-</span>' : `${parseFloat(r.qty || 0).toLocaleString('en-US', { maximumFractionDigits: 4 })} 股`}</td>
+                        <td class="px-4 py-2.5 text-center text-xs table-num">${s.market === 'Crypto' ? formatNum(r.price) : `${formatNum(price)} ${currency}`}</td>
                         <td class="px-4 py-2.5 text-center text-xs table-num">${profitDisplay}</td>
                         <td class="px-4 py-2.5 text-center text-xs text-gray-400 truncate max-w-[120px]">${r.remark || '-'}</td>
                     </tr>`;

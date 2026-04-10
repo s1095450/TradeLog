@@ -22,7 +22,7 @@
                 extend: {
                     colors: {
                         bgDark: '#1E2329', cardDark: '#2B3139', inputBgDark: '#3E4651',
-                        bgLight: '#F3F4F6', cardLight: '#FFFFFF', inputBgLight: '#E5E7EB',
+                        bgLight: '#EAECF0', cardLight: '#FFFFFF', inputBgLight: '#F0F2F5',
                         primary: '#26C0DB', crypto: '#4ECDC4',
                         danger: '#FF6B6B', success: '#0ECB81'
                     }
@@ -39,6 +39,7 @@
 
         input[type="number"] {
             -moz-appearance: textfield;
+            appearance: textfield;
         }
 
         body {
@@ -56,7 +57,7 @@
         }
 
         .glass {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.90);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(0, 0, 0, 0.05);
         }
@@ -198,6 +199,14 @@
 </head>
 
 <body class="bg-bgLight dark:bg-bgDark text-gray-800 dark:text-white font-sans h-screen flex overflow-hidden">
+    <script>
+        // 在頁面渲染前立即套用主題，避免閃白畫面
+        if (localStorage.getItem('theme') !== 'light') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
 
     <!-- ==================== 最左側：64px 導覽列 ==================== -->
     <div class="w-16 glass m-4 mr-2 rounded-3xl flex flex-col items-center py-5 gap-2 shadow-2xl z-30 flex-shrink-0">
@@ -341,7 +350,10 @@
                         <div class="text-xl font-extrabold table-num text-gray-400" id="dash-us-unrealized-usd">--</div>
                         <div class="text-xs table-num text-gray-400" id="dash-us-unrealized-twd"></div>
                     </div>
-                    <div class="text-xs text-gray-400 flex-shrink-0" id="dash-usdtwd-rate"></div>
+                    <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                        <div class="text-xs text-gray-400" id="dash-usdtwd-rate"></div>
+                        <div class="text-xs text-gray-400/60 flex items-center gap-1 price-source-label"></div>
+                    </div>
                 </div>
             </div>
 
@@ -358,7 +370,7 @@
         <div class="flex items-center gap-2 bg-white dark:bg-bgDark rounded-xl px-3 border border-gray-200 dark:border-gray-600 shadow-sm w-56">
             <iconify-icon icon="solar:magnifer-bold-duotone" class="text-gray-400 text-lg flex-shrink-0"></iconify-icon>
             <input type="text" id="search-input" placeholder="搜尋代碼 / 名稱 / 備註..."
-                oninput="renderTable()"
+                oninput="onSearchInput()"
                 class="bg-transparent outline-none text-sm py-2 w-full text-gray-700 dark:text-gray-200 placeholder-gray-400">
             <button onclick="clearSearch()" id="btn-clear-search" class="hidden text-gray-400 hover:text-danger transition">
                 <iconify-icon icon="solar:close-circle-bold" class="text-lg"></iconify-icon>
@@ -405,6 +417,9 @@
                         <tbody id="table-body" class="text-sm text-gray-700 dark:text-gray-200"></tbody>
                     </table>
                 </div>
+                <div id="pagination-bar"
+                    class="flex items-center justify-between px-5 py-2.5 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[48px]">
+                </div>
             </div>
         </div>
 
@@ -418,7 +433,8 @@
                     <h1 class="text-xl font-extrabold">持倉總覽</h1>
                     <p class="text-xs text-gray-500 dark:text-gray-400">目前持有部位 · 移動平均成本法</p>
                 </div>
-                <div class="ml-auto flex gap-2">
+                <div class="ml-auto flex items-center gap-3">
+                    <div class="text-xs text-gray-400/60 flex items-center gap-1 price-source-label"></div>
                     <button onclick="refreshHoldingsPrice()"
                         class="btn-refresh-price px-4 py-2 bg-success/10 hover:bg-success/20 text-success rounded-xl font-bold transition flex items-center gap-2 text-sm border border-success/20">
                         <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon> 刷新股價
