@@ -635,7 +635,8 @@ function onSearchInput() {
 // ==================== 導覽 ====================
 
 function navigateTo(page) {
-    ['dashboard', 'holdings', 'charts', 'stockprofit'].forEach(p => {
+    const pages = ['dashboard', 'holdings', 'charts', 'stockprofit', 'calendar'];
+    pages.forEach(p => {
         document.getElementById(`page-${p}`).classList.toggle('hidden', p !== page);
         const btn = document.getElementById(`nav-${p}`);
         if (!btn) return;
@@ -643,9 +644,20 @@ function navigateTo(page) {
         else { btn.classList.remove('active'); btn.querySelector('iconify-icon').style.color = ''; }
     });
 
-    if (page === 'holdings') initHoldings();
-    if (page === 'charts')   initCharts();
+    // 日曆頁整頁顯示，隱藏左側輸入區
+    const sidebar = document.getElementById('sidebar');
+    if (page === 'calendar') {
+        gsap.to(sidebar, { width: 0, opacity: 0, padding: 0, marginRight: 0, duration: 0.25, ease: 'power2.inOut',
+            onComplete: () => sidebar.classList.add('hidden') });
+    } else {
+        sidebar.classList.remove('hidden');
+        gsap.to(sidebar, { width: 320, opacity: 1, padding: '', marginRight: '', duration: 0.25, ease: 'power2.inOut' });
+    }
+
+    if (page === 'holdings')    initHoldings();
+    if (page === 'charts')      initCharts();
     if (page === 'stockprofit') initStockProfit();
+    if (page === 'calendar')    initCalendar();
 }
 // ==================== 匯出 CSV ====================
 

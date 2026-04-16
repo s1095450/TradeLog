@@ -6,6 +6,8 @@ const Calculator = (() => {
     let exchangeRate = null;   // 快取匯率
     let calcUnit = 'TWD';      // 股數試算金額單位
     let lastStockSymbol = null; // 上次試算的股票代號（供刷新使用）
+    let returnMode = 'forward'; // 報酬試算模式
+    let returnUnit = 'TWD';     // 報酬試算幣別
 
     // ==================== 面板開關 ====================
 
@@ -90,7 +92,7 @@ const Calculator = (() => {
 
         const twdBtn = document.getElementById('calc-unit-twd');
         const usdBtn = document.getElementById('calc-unit-usd');
-        const activeClass = ['bg-primary', 'text-white'];
+        const activeClass = ['bg-primary', 'text-white', 'dark:text-bgDark'];
         const inactiveClass = ['text-gray-500', 'dark:text-gray-400', 'hover:text-gray-800', 'dark:hover:text-white'];
 
         if (unit === 'TWD') {
@@ -150,6 +152,175 @@ const Calculator = (() => {
         gsap.from(resultEl, { duration: 0.3, y: 8, opacity: 0, ease: 'power2.out' });
     }
 
+    // ==================== 報酬試算 ====================
+
+    function setReturnMode(mode) {
+        returnMode = mode;
+        const activeClass   = ['bg-primary', 'text-white', 'dark:text-bgDark'];
+        const inactiveClass = ['text-gray-500', 'dark:text-gray-400', 'hover:text-gray-800', 'dark:hover:text-white'];
+        const fwdBtn = document.getElementById('ret-mode-fwd');
+        const revBtn = document.getElementById('ret-mode-rev');
+
+        if (mode === 'forward') {
+            fwdBtn.classList.add(...activeClass);    fwdBtn.classList.remove(...inactiveClass);
+            revBtn.classList.remove(...activeClass); revBtn.classList.add(...inactiveClass);
+            document.getElementById('ret-fwd-row').classList.remove('hidden');
+            document.getElementById('ret-rev-row').classList.add('hidden');
+        } else {
+            revBtn.classList.add(...activeClass);    revBtn.classList.remove(...inactiveClass);
+            fwdBtn.classList.remove(...activeClass); fwdBtn.classList.add(...inactiveClass);
+            document.getElementById('ret-rev-row').classList.remove('hidden');
+            document.getElementById('ret-fwd-row').classList.add('hidden');
+        }
+        calcReturn();
+    }
+
+    function setReturnUnit(unit) {
+        returnUnit = unit;
+        document.getElementById('ret-entry-unit').textContent = unit;
+
+        const activeClass   = ['bg-primary', 'text-white', 'dark:text-bgDark'];
+        const inactiveClass = ['text-gray-500', 'dark:text-gray-400', 'hover:text-gray-800', 'dark:hover:text-white'];
+        const twdBtn = document.getElementById('ret-unit-twd');
+        const usdBtn = document.getElementById('ret-unit-usd');
+
+        if (unit === 'TWD') {
+            twdBtn.classList.add(...activeClass);    twdBtn.classList.remove(...inactiveClass);
+            usdBtn.classList.remove(...activeClass); usdBtn.classList.add(...inactiveClass);
+        } else {
+            usdBtn.classList.add(...activeClass);    usdBtn.classList.remove(...inactiveClass);
+            twdBtn.classList.remove(...activeClass); twdBtn.classList.add(...inactiveClass);
+        }
+        calcReturn();
+    }
+
+    async function calcReturn() {
+        const entry     = parseFloat(document.getElementById('ret-entry').value);
+        const shares    = parseFloat(document.getElementById('ret-shares').value) || 0;
+        const resultEl  = document.getElementById('ret-result');
+        const isUSD     = returnUnit === 'USD';
+
+        if (!entry || entry <= 0) { resultEl.classList.add('hidden'); return; }
+
+        let rate, profit, target;
+
+        if (returnMode === 'forward') {
+            rate = parseFloat(document.getElementById('ret-rate-input').value);
+            if (isNaN(rate)) { resultEl.classList.add('hidden'); return; }
+            target = entry * (1 + rate / 100);
+            profit = target - entry;
+        } else {
+            target = parseFloat(document.getElementById('ret-target-input').value);
+            if (isNaN(target) || target <= 0) { resultEl.classList.add('hidden'); return; }
+            profit = target - entry;
+            rate   = (profit / entry) * 100;
+        }
+
+        const totalProfit = shares > 0 ? profit * shares : null;
+
+        const isPos    = profit >= 0;
+        const colorCls = isPos ? 'text-success' : 'text-danger';
+        const bgCls    = isPos ? 'bg-success/10 dark:bg-success/15' : 'bg-danger/10 dark:bg-danger/15';
+        const sign     = isPos ? '+' : '';
+
+        // 格式化數字
+        const fmtPrice  = v => isUSD ? `$${v.toFixed(2)}` : v.toLocaleString('en-US', {maximumFractionDigits: 2});
+        const fmtProfit = v => isUSD ? `$${Math.abs(v).toFixed(2)}` : Math.abs(v).toLocaleString('en-US', {maximumFractionDigits: 0});
+
+        // 主要結果區
+        document.getElementById('ret-top-bg').className = `px-4 py-4 text-center ${bgCls}`;
+
+        if (returnMode === 'forward') {
+            document.getElementById('ret-main-label').textContent = '目標賣出價';
+            document.getElementById('ret-main-value').textContent = `${fmtPrice(target)} ${returnUnit}`;
+        } else {
+            document.getElementById('ret-main-label').textContent = '報酬率';
+            document.getElementById('ret-main-value').textContent = `${sign}${rate.toFixed(2)}%`;
+        }
+        document.getElementById('ret-main-value').className = `text-2xl font-extrabold table-num ${colorCls}`;
+
+        // 次要資訊（左：每股獲利/虧損；右：另一個值）
+        const perShareLabel = isPos ? '每股獲利' : '每股虧損';
+        const perShareText  = `${sign}${fmtProfit(profit)} ${returnUnit}`;
+
+        document.getElementById('ret-sub-label-l').textContent = perShareLabel;
+        document.getElementById('ret-sub-value-l').textContent = perShareText;
+        document.getElementById('ret-sub-value-l').className   = `text-sm font-extrabold table-num ${colorCls}`;
+
+        if (returnMode === 'forward') {
+            document.getElementById('ret-sub-label-r').textContent = '報酬率';
+            document.getElementById('ret-sub-value-r').textContent = `${sign}${rate.toFixed(2)}%`;
+        } else {
+            document.getElementById('ret-sub-label-r').textContent = '目標賣出價';
+            document.getElementById('ret-sub-value-r').textContent = `${fmtPrice(target)} ${returnUnit}`;
+        }
+        document.getElementById('ret-sub-value-r').className = `text-sm font-extrabold table-num ${colorCls}`;
+
+        // 總獲利列（有股數時才顯示）
+        const totalRow = document.getElementById('ret-total-row');
+        if (totalProfit !== null) {
+            const totalLabel = isPos ? '總獲利' : '總虧損';
+            document.getElementById('ret-total-label').textContent = totalLabel;
+            document.getElementById('ret-total-value').textContent = `${sign}${fmtProfit(totalProfit)} ${returnUnit}`;
+            document.getElementById('ret-total-value').className = `text-xl font-extrabold table-num ${colorCls}`;
+            totalRow.classList.remove('hidden');
+        } else {
+            totalRow.classList.add('hidden');
+        }
+
+        // 首次顯示加入動畫
+        const wasHidden = resultEl.classList.contains('hidden');
+        resultEl.classList.remove('hidden');
+        if (wasHidden) gsap.from(resultEl, { duration: 0.3, y: 8, opacity: 0, ease: 'power2.out' });
+
+        // USD 模式：顯示台幣換算
+        const twdBlock = document.getElementById('ret-twd-block');
+        if (isUSD) {
+            if (!exchangeRate) await loadExchangeRate();
+            if (exchangeRate) {
+                const isPos = profit >= 0;
+                const colorCls = isPos ? 'text-success' : 'text-danger';
+                const sign = isPos ? '+' : '';
+
+                const targetTWD = target * exchangeRate;
+                const profitTWD = profit * exchangeRate;
+
+                document.getElementById('ret-twd-target-label').textContent = '目標賣出價約';
+                document.getElementById('ret-twd-target-value').textContent =
+                    `${targetTWD.toLocaleString('en-US', {maximumFractionDigits: 0})} TWD`;
+                document.getElementById('ret-twd-target-value').className = 'text-sm font-extrabold table-num';
+
+                const profitLbl = isPos ? '每股獲利約' : '每股虧損約';
+                document.getElementById('ret-twd-profit-label').textContent = profitLbl;
+                document.getElementById('ret-twd-profit-value').textContent =
+                    `${sign}${Math.abs(profitTWD).toLocaleString('en-US', {maximumFractionDigits: 0})} TWD`;
+                document.getElementById('ret-twd-profit-value').className = `text-sm font-extrabold table-num ${colorCls}`;
+
+                // 總獲利 TWD
+                const twdTotalRow = document.getElementById('ret-twd-total-row');
+                if (totalProfit !== null) {
+                    const totalProfitTWD = totalProfit * exchangeRate;
+                    document.getElementById('ret-twd-total-value').textContent =
+                        `${sign}${Math.abs(totalProfitTWD).toLocaleString('en-US', {maximumFractionDigits: 0})} TWD`;
+                    document.getElementById('ret-twd-total-value').className = `text-sm font-extrabold table-num ${colorCls}`;
+                    twdTotalRow.style.display = 'flex';
+                } else {
+                    twdTotalRow.style.display = 'none';
+                }
+
+                document.getElementById('ret-twd-rate-note').textContent =
+                    `1 USD = ${exchangeRate.toFixed(2)} TWD`;
+
+                if (twdBlock.classList.contains('hidden')) {
+                    twdBlock.classList.remove('hidden');
+                    gsap.from(twdBlock, { duration: 0.25, y: 6, opacity: 0, ease: 'power2.out' });
+                }
+            }
+        } else {
+            twdBlock.classList.add('hidden');
+        }
+    }
+
     // ==================== 全部刷新 ====================
 
     async function refreshAll() {
@@ -168,6 +339,9 @@ const Calculator = (() => {
             document.getElementById('calc-symbol').value = lastStockSymbol;
             await calcShares();
         }
+
+        // 重新觸發報酬試算（更新台幣換算區塊的匯率）
+        calcReturn();
     }
 
     // ==================== 工具函式 ====================
@@ -187,8 +361,16 @@ const Calculator = (() => {
     }
 
     // ==================== 公開介面 ====================
-    return { togglePanel, convertCurrency, swapCurrency, setCalcUnit, calcShares, refreshAll };
+    return { togglePanel, convertCurrency, swapCurrency, setCalcUnit, calcShares, refreshAll,
+             setReturnMode, setReturnUnit, calcReturn };
 })();
+
+// 防止滾輪意外改變 number 輸入框的數值
+document.addEventListener('wheel', () => {
+    if (document.activeElement?.type === 'number') {
+        document.activeElement.blur();
+    }
+}, { passive: true });
 
 // 全域函式供 HTML onclick 使用
 function toggleCalculatorPanel() { Calculator.togglePanel(); }
@@ -197,3 +379,6 @@ function swapCurrency() { Calculator.swapCurrency(); }
 function setCalcUnit(unit) { Calculator.setCalcUnit(unit); }
 function calcShares() { Calculator.calcShares(); }
 function refreshAll() { Calculator.refreshAll(); }
+function setReturnMode(mode) { Calculator.setReturnMode(mode); }
+function setReturnUnit(unit) { Calculator.setReturnUnit(unit); }
+function calcReturn() { Calculator.calcReturn(); }

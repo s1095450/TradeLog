@@ -238,6 +238,12 @@
             <iconify-icon icon="solar:graph-up-bold-duotone" class="text-2xl"></iconify-icon>
         </button>
 
+        <button onclick="navigateTo('calendar')" id="nav-calendar"
+            class="nav-item w-11 h-11 rounded-xl flex items-center justify-center transition-all text-gray-400 dark:text-gray-500 hover:bg-inputBgLight dark:hover:bg-inputBgDark hover:text-gray-700 dark:hover:text-white"
+            data-tooltip="盈虧日曆">
+            <iconify-icon icon="solar:calendar-bold-duotone" class="text-2xl"></iconify-icon>
+        </button>
+
         <!-- 分隔線 -->
         <div class="w-8 border-t border-gray-300 dark:border-gray-600 my-1"></div>
 
@@ -774,6 +780,90 @@
         </div>
     </div>
 </div>
+
+        <!-- ── 日曆盈虧頁 ── -->
+        <div id="page-calendar" class="hidden h-full flex flex-col gap-3">
+
+            <!-- 頂部導航列 -->
+            <div class="glass rounded-3xl px-6 py-4 shadow-xl flex items-center flex-shrink-0">
+                <!-- 左：標題 -->
+                <div class="flex items-center gap-3 flex-1">
+                    <iconify-icon icon="solar:calendar-bold-duotone" class="text-4xl text-primary flex-shrink-0"></iconify-icon>
+                    <div>
+                        <div class="text-lg font-extrabold leading-tight">盈虧日曆</div>
+                        <div class="text-xs text-gray-400 font-bold tracking-wide leading-tight">已實現損益</div>
+                    </div>
+                </div>
+
+                <!-- 中：年月導航 -->
+                <div class="flex items-center gap-2">
+                    <button onclick="calPrevMonth()"
+                        class="w-8 h-8 rounded-xl bg-inputBgLight dark:bg-inputBgDark hover:bg-primary/20 hover:text-primary text-gray-500 dark:text-gray-400 flex items-center justify-center transition-all">
+                        <iconify-icon icon="solar:alt-arrow-left-bold"></iconify-icon>
+                    </button>
+
+                    <!-- 年份選擇器 -->
+                    <div class="relative">
+                        <button onclick="toggleCalYearDropdown()"
+                            class="px-3 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark hover:bg-primary/20 hover:text-primary text-sm font-bold flex items-center gap-1 transition-all">
+                            <span id="cal-year-display">2025 年</span>
+                            <iconify-icon icon="solar:alt-arrow-down-bold" class="text-xs text-gray-400"></iconify-icon>
+                        </button>
+                        <div id="cal-year-dropdown"
+                            class="hidden fixed bg-white dark:bg-cardDark border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl overflow-hidden max-h-52 overflow-y-auto custom-scrollbar min-w-[100px]"
+                            style="z-index:9999">
+                        </div>
+                    </div>
+
+                    <!-- 月份選擇器 -->
+                    <div class="relative">
+                        <button onclick="toggleCalMonthDropdown()"
+                            class="px-3 py-2 rounded-xl bg-inputBgLight dark:bg-inputBgDark hover:bg-primary/20 hover:text-primary text-sm font-bold flex items-center gap-1 transition-all">
+                            <span id="cal-month-display">1 月</span>
+                            <iconify-icon icon="solar:alt-arrow-down-bold" class="text-xs text-gray-400"></iconify-icon>
+                        </button>
+                        <div id="cal-month-dropdown"
+                            class="hidden fixed bg-white dark:bg-cardDark border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl overflow-hidden min-w-[80px]"
+                            style="z-index:9999">
+                        </div>
+                    </div>
+
+                    <button onclick="calNextMonth()"
+                        class="w-8 h-8 rounded-xl bg-inputBgLight dark:bg-inputBgDark hover:bg-primary/20 hover:text-primary text-gray-500 dark:text-gray-400 flex items-center justify-center transition-all">
+                        <iconify-icon icon="solar:alt-arrow-right-bold"></iconify-icon>
+                    </button>
+                </div>
+
+                <!-- 右：當月盈虧 -->
+                <div class="flex-1 flex flex-col items-end">
+                    <div class="text-[10px] text-gray-400 font-bold tracking-wide uppercase">當月合計</div>
+                    <div id="cal-monthly-total" class="text-2xl font-extrabold table-num text-gray-400 mt-0.5">--</div>
+                </div>
+            </div>
+
+            <!-- 日曆主體 -->
+            <div class="glass rounded-3xl p-5 shadow-xl flex-1 flex flex-col overflow-hidden">
+                <!-- 星期標題列 -->
+                <div class="grid grid-cols-7 mb-2 flex-shrink-0">
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">日</div>
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">一</div>
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">二</div>
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">三</div>
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">四</div>
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">五</div>
+                    <div class="text-center text-xs font-bold text-gray-400 py-1">六</div>
+                </div>
+
+                <!-- 日曆格子區 -->
+                <div id="cal-grid" class="grid grid-cols-7 gap-2 flex-1 min-h-0"></div>
+
+                <!-- 底部說明小字 -->
+                <div class="mt-2 text-center text-xs text-gray-400 dark:text-gray-600 flex-shrink-0">
+                    美股價格根據交易當日匯率計算
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- ==================== 載入 JS ==================== -->
@@ -784,6 +874,7 @@
     <script src="/js/charts.js"></script>
     <script src="/js/stockprofit.js"></script>
     <script src="/js/calculator.js"></script>
+    <script src="/js/calendar.js"></script>
     <script>
         window.onload = () => initDashboard();
     </script>
@@ -850,9 +941,9 @@
                         <!-- TWD / USD 切換 -->
                         <div class="flex bg-inputBgLight dark:bg-inputBgDark rounded-xl p-1 flex-shrink-0">
                             <button id="calc-unit-twd" onclick="setCalcUnit('TWD')"
-                                class="px-2 py-1 rounded-lg text-xs font-bold bg-primary text-white transition-all">TWD</button>
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-white dark:text-bgDark transition-all">TWD</button>
                             <button id="calc-unit-usd" onclick="setCalcUnit('USD')"
-                                class="px-2 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all">USD</button>
+                                class="px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all">USD</button>
                         </div>
                     </div>
                     <button onclick="calcShares()"
@@ -887,6 +978,112 @@
 
                     <!-- 試算錯誤訊息 -->
                     <div id="calc-error" class="hidden bg-danger/10 text-danger text-xs font-bold rounded-xl px-4 py-3"></div>
+                </div>
+            </div>
+
+            <!-- 分隔線 -->
+            <div class="border-t border-gray-200 dark:border-gray-700"></div>
+
+            <!-- 模組三：報酬試算 -->
+            <div>
+                <!-- 標題列：標籤 + 幣別切換 -->
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">報酬試算</p>
+                    <div class="flex bg-inputBgLight dark:bg-inputBgDark rounded-xl p-1">
+                        <button id="ret-unit-twd" onclick="setReturnUnit('TWD')"
+                            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-primary text-white dark:text-bgDark transition-all">TWD</button>
+                        <button id="ret-unit-usd" onclick="setReturnUnit('USD')"
+                            class="px-2.5 py-1 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all">USD</button>
+                    </div>
+                </div>
+
+                <!-- 正向 / 反向 模式切換 -->
+                <div class="flex bg-inputBgLight dark:bg-inputBgDark rounded-xl p-1 mb-3">
+                    <button id="ret-mode-fwd" onclick="setReturnMode('forward')"
+                        class="flex-1 py-1.5 rounded-lg text-xs font-bold bg-primary text-white dark:text-bgDark transition-all">
+                        成本 + 報酬率 →
+                    </button>
+                    <button id="ret-mode-rev" onclick="setReturnMode('reverse')"
+                        class="flex-1 py-1.5 rounded-lg text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white transition-all">
+                        成本 + 目標價 →
+                    </button>
+                </div>
+
+                <!-- 輸入欄位 -->
+                <div class="space-y-2">
+                    <!-- 成本價（全寬） -->
+                    <div class="relative">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">成本</span>
+                        <input id="ret-entry" type="number" placeholder="0" oninput="calcReturn()"
+                            class="w-full bg-inputBgLight dark:bg-inputBgDark rounded-xl py-3 pl-12 pr-14 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-primary transition">
+                        <span id="ret-entry-unit" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 pointer-events-none">TWD</span>
+                    </div>
+                    <!-- 第二列：股數 + 報酬率/目標價 並排 -->
+                    <div class="flex gap-2">
+                        <!-- 股數（左半） -->
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">股數</span>
+                            <input id="ret-shares" type="number" placeholder="0" min="0" oninput="calcReturn()"
+                                class="w-full bg-inputBgLight dark:bg-inputBgDark rounded-xl py-3 pl-10 pr-3 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-primary transition">
+                        </div>
+                        <!-- 正向：報酬率（右半） -->
+                        <div id="ret-fwd-row" class="relative flex-1">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">報酬</span>
+                            <input id="ret-rate-input" type="number" placeholder="0" oninput="calcReturn()"
+                                class="w-full bg-inputBgLight dark:bg-inputBgDark rounded-xl py-3 pl-10 pr-7 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-primary transition">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 pointer-events-none">%</span>
+                        </div>
+                        <!-- 反向：目標價（右半） -->
+                        <div id="ret-rev-row" class="relative flex-1 hidden">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-gray-400 pointer-events-none">目標</span>
+                            <input id="ret-target-input" type="number" placeholder="0" oninput="calcReturn()"
+                                class="w-full bg-inputBgLight dark:bg-inputBgDark rounded-xl py-3 pl-10 pr-3 text-right text-sm font-bold outline-none focus:ring-2 focus:ring-primary transition">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 結果卡片 -->
+                <div id="ret-result" class="hidden mt-3 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <!-- 主要數字 -->
+                    <div id="ret-top-bg" class="px-4 py-4 text-center">
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5" id="ret-main-label">目標賣出價</div>
+                        <div class="text-2xl font-extrabold table-num" id="ret-main-value">--</div>
+                    </div>
+                    <!-- 次要資訊 -->
+                    <div class="grid grid-cols-2 divide-x divide-gray-200 dark:divide-gray-700 border-t border-gray-200 dark:border-gray-700 bg-inputBgLight dark:bg-inputBgDark">
+                        <div class="px-3 py-2.5 text-center">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1" id="ret-sub-label-l">獲利</div>
+                            <div class="text-sm font-extrabold table-num" id="ret-sub-value-l">--</div>
+                        </div>
+                        <div class="px-3 py-2.5 text-center">
+                            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-1" id="ret-sub-label-r">報酬率</div>
+                            <div class="text-sm font-extrabold table-num" id="ret-sub-value-r">--</div>
+                        </div>
+                    </div>
+                    <!-- 總獲利（有股數時顯示） -->
+                    <div id="ret-total-row" class="hidden px-4 py-3 text-center border-t border-gray-200 dark:border-gray-700 bg-inputBgLight dark:bg-inputBgDark">
+                        <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1" id="ret-total-label">總獲利</div>
+                        <div class="text-xl font-extrabold table-num" id="ret-total-value">--</div>
+                    </div>
+                </div>
+
+                <!-- USD 模式：台幣換算區塊 -->
+                <div id="ret-twd-block" class="hidden mt-2 bg-inputBgLight dark:bg-inputBgDark rounded-xl px-4 py-3 space-y-1.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-500 dark:text-gray-400" id="ret-twd-target-label">目標賣出價約</span>
+                        <span class="text-sm font-extrabold table-num" id="ret-twd-target-value">--</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-gray-500 dark:text-gray-400" id="ret-twd-profit-label">每股獲利約</span>
+                        <span class="text-sm font-extrabold table-num" id="ret-twd-profit-value">--</span>
+                    </div>
+                    <div id="ret-twd-total-row" class="hidden justify-between items-center">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">總獲利約</span>
+                        <span class="text-sm font-extrabold table-num" id="ret-twd-total-value">--</span>
+                    </div>
+                    <div class="border-t border-gray-300 dark:border-gray-600 pt-1.5">
+                        <span class="text-[10px] text-gray-400" id="ret-twd-rate-note">--</span>
+                    </div>
                 </div>
             </div>
         </div>

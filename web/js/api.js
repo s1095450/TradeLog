@@ -30,4 +30,7 @@ const API = {
 
     getExchangeRate: () => eel.get_exchange_rate()(),//匯率換算
     getStockPrice: (symbol) => eel.get_stock_price(symbol)(),//查詢任意美股股價
+
+    getCalendarData: (year, month) => eel.get_calendar_data(year, month)(),//日曆盈虧
+    getCalendarYears: () => eel.get_calendar_years()(),//日曆年份選單
 };

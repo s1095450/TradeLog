@@ -55,6 +55,7 @@ def init_db():
     ''')
     conn.commit()
     _migrate_db(conn)
+    _backfill_usdtwd_rates(conn)
     conn.close()
 
 def _migrate_db(conn):
@@ -63,12 +64,75 @@ def _migrate_db(conn):
     c.execute("PRAGMA user_version")
     version = c.fetchone()[0]
 
-    # 範例（未來需要新增欄位時在此擴充）：
-    # if version < 1:
-    #     c.execute("ALTER TABLE records ADD COLUMN tax REAL DEFAULT 0")
-    #     c.execute("PRAGMA user_version = 1")
+    if version < 1:
+        c.execute("ALTER TABLE records ADD COLUMN usd_twd_rate REAL")
+        c.execute("PRAGMA user_version = 1")
 
     conn.commit()
+
+
+def _fetch_historical_usdtwd(date_str):
+    """查詢指定日期（YYYYMMDD）的 USD/TWD 收盤匯率。
+    若當天無資料（假日/週末），往前找最近一個有報價的交易日。"""
+    try:
+        import yfinance as yf
+        from datetime import datetime, timedelta
+
+        trade_dt = datetime.strptime(date_str, '%Y%m%d')
+        # 往前抓 7 天的資料，確保能涵蓋週末與假日
+        start = (trade_dt - timedelta(days=7)).strftime('%Y-%m-%d')
+        end   = (trade_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+
+        hist = yf.Ticker('USDTWD=X').history(start=start, end=end)
+        if hist.empty:
+            return None
+        return round(float(hist['Close'].iloc[-1]), 4)
+    except Exception:
+        return None
+
+
+def _backfill_usdtwd_rates(conn):
+    """啟動時補齊歷史美股記錄缺少的 usd_twd_rate（一次性，補完後不再觸發）"""
+    try:
+        import yfinance as yf
+        from datetime import datetime, timedelta
+
+        c = conn.cursor()
+        c.execute("""
+            SELECT DISTINCT date FROM records
+            WHERE market = '美股' AND usd_twd_rate IS NULL
+            ORDER BY date ASC
+        """)
+        dates = [row['date'] for row in c.fetchall()]
+        if not dates:
+            return
+
+        # 批次下載整段期間的匯率，減少 API 呼叫次數
+        min_dt = datetime.strptime(min(dates), '%Y%m%d')
+        max_dt = datetime.strptime(max(dates), '%Y%m%d')
+        start  = (min_dt - timedelta(days=7)).strftime('%Y-%m-%d')
+        end    = (max_dt + timedelta(days=2)).strftime('%Y-%m-%d')
+
+        hist = yf.Ticker('USDTWD=X').history(start=start, end=end)
+        if hist.empty:
+            return
+
+        for date_str in dates:
+            trade_dt = datetime.strptime(date_str, '%Y%m%d')
+            # 取交易日當天（含）之前最近的收盤價
+            cutoff = (trade_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            subset = hist[hist.index < cutoff]
+            if subset.empty:
+                continue
+            rate = round(float(subset['Close'].iloc[-1]), 4)
+            c.execute("""
+                UPDATE records SET usd_twd_rate = ?
+                WHERE market = '美股' AND date = ? AND usd_twd_rate IS NULL
+            """, (rate, date_str))
+
+        conn.commit()
+    except Exception:
+        pass  # 補值失敗不影響啟動，日曆只是缺部分匯率
 
 # ==================== 核心對帳邏輯 ====================
 
@@ -528,10 +592,16 @@ def add_record(mode, data):
             values = list(data.values())
 
             c.execute(f"INSERT INTO {table} ({columns}) VALUES ({placeholders})", values)
+            new_id = c.lastrowid  # 在 recalculate 之前先存下 ID
 
             # 新增後重新對帳，確保補登舊日期的買入時後續賣出盈虧同步更新
             if mode == 'Stock':
                 recalculate_symbol_profits(data['symbol'], conn)
+                # 美股：抓取交易日匯率存入 DB，供日曆靜態顯示用
+                if data.get('market') == '美股':
+                    rate = _fetch_historical_usdtwd(data['date'])
+                    if rate is not None:
+                        c.execute("UPDATE records SET usd_twd_rate = ? WHERE id = ?", (rate, new_id))
 
             conn.commit()
         except Exception:
@@ -570,6 +640,10 @@ def update_record(mode, record_id, data):
             # 修改後重新對帳該股票所有賣出盈虧（確保後續賣出同步更新）
             if mode == 'Stock':
                 recalculate_symbol_profits(data['symbol'], conn)
+                # 美股：重新抓取交易日匯率（日期可能被修改，所以每次更新都重抓）
+                if data.get('market') == '美股':
+                    rate = _fetch_historical_usdtwd(data['date'])
+                    c.execute("UPDATE records SET usd_twd_rate = ? WHERE id = ?", (rate, record_id))
 
             conn.commit()
         except Exception:
@@ -707,6 +781,92 @@ def get_stock_price(symbol):
         return {"status": "success", "data": {"symbol": symbol, "price": round(float(price), 4), "updated_at": now, "source": "Yahoo Finance"}}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+# ==================== 日曆 ====================
+
+@eel.expose
+def get_calendar_data(year, month):
+    """取得指定年月的每日已實現盈虧資料（供日曆頁靜態顯示）"""
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+
+        ym = f"{int(year):04d}{int(month):02d}"
+        c.execute("""
+            SELECT id, date, market, symbol, name, qty,
+                   price_twd, price_usd, profit, usd_twd_rate
+            FROM records
+            WHERE action = '賣出' AND date LIKE ?
+            ORDER BY date ASC, id ASC
+        """, (f"{ym}%",))
+        rows = [dict(row) for row in c.fetchall()]
+        conn.close()
+
+        days = {}
+        for r in rows:
+            date   = r['date']
+            profit = float(r.get('profit') or 0)
+            rate   = r.get('usd_twd_rate')
+            market = r['market']
+
+            if market == '台股':
+                profit_twd = profit
+                profit_usd = None
+            else:
+                profit_usd = profit
+                profit_twd = round(profit * rate, 2) if rate else 0.0
+
+            if date not in days:
+                days[date] = {'total_twd': 0.0, 'trades': []}
+
+            days[date]['total_twd'] = round(days[date]['total_twd'] + profit_twd, 2)
+            days[date]['trades'].append({
+                'symbol':      r['symbol'],
+                'name':        r.get('name') or r['symbol'],
+                'market':      market,
+                'qty':         float(r.get('qty') or 0),
+                'price_twd':   float(r.get('price_twd') or 0) if market == '台股' else None,
+                'price_usd':   float(r.get('price_usd') or 0) if market != '台股' else None,
+                'profit':      round(profit, 2),
+                'profit_twd':  round(profit_twd, 2),
+                'profit_usd':  round(profit_usd, 2) if profit_usd is not None else None,
+                'usd_twd_rate': rate,
+            })
+
+        monthly_total = round(sum(d['total_twd'] for d in days.values()), 2)
+
+        return {
+            'status': 'success',
+            'data': {
+                'monthly_total_twd': monthly_total,
+                'days': days,
+            }
+        }
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+@eel.expose
+def get_calendar_years():
+    """從 records 動態取得有交易記錄的年份範圍（供日曆年份選擇器使用）"""
+    try:
+        from datetime import datetime
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT MIN(date) as min_d, MAX(date) as max_d FROM records")
+        row = dict(c.fetchone())
+        conn.close()
+
+        current_year = datetime.now().year
+        if not row['min_d']:
+            return {'status': 'success', 'data': [current_year]}
+
+        min_year = int(row['min_d'][:4])
+        max_year = max(int(row['max_d'][:4]), current_year)
+        return {'status': 'success', 'data': list(range(min_year, max_year + 1))}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
 
 
 # ==================== 啟動 ====================
