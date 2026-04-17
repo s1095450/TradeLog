@@ -749,33 +749,31 @@
     <!-- 排序列 + 表格 -->
     <div class="flex-1 glass rounded-3xl flex flex-col overflow-hidden shadow-xl">
 
-        <!-- 排序切換 -->
+        <!-- 分類篩選 -->
         <div class="flex items-center gap-2 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-            <span class="text-xs text-gray-400 font-bold mr-1">排序：</span>
-            <button id="sp-sort-last_date" onclick="spSort('last_date')"
+            <span class="text-xs text-gray-400 font-bold mr-1">分類：</span>
+            <button id="sp-filter-all" onclick="spFilter('all')"
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition bg-primary/20 text-primary">
-                最後交易日
+                全部
             </button>
-            <button id="sp-sort-symbol" onclick="spSort('symbol')"
+            <button id="sp-filter-tw" onclick="spFilter('台股')"
                 class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-400 hover:bg-inputBgLight dark:hover:bg-inputBgDark">
-                代碼
+                台股
+            </button>
+            <button id="sp-filter-us" onclick="spFilter('美股')"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-400 hover:bg-inputBgLight dark:hover:bg-inputBgDark">
+                美股
+            </button>
+            <button id="sp-filter-crypto" onclick="spFilter('Crypto')"
+                class="px-3 py-1.5 rounded-lg text-xs font-bold transition text-gray-400 hover:bg-inputBgLight dark:hover:bg-inputBgDark">
+                Crypto
             </button>
         </div>
 
         <!-- 表格 -->
         <div class="flex-1 overflow-auto custom-scrollbar">
             <table class="w-full text-center border-collapse table-auto">
-                <thead class="text-gray-500 dark:text-gray-400 text-xs tracking-wider border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-bgDark/95 backdrop-blur-md z-10">
-                    <tr>
-                        <th class="px-4 py-3 text-center">市場</th>
-                        <th class="px-4 py-3 text-center">代碼</th>
-                        <th class="px-4 py-3 text-center">名稱</th>
-                        <th class="px-4 py-3 text-center">最後交易日</th>
-                        <th class="px-4 py-3 text-center">交易次數</th>
-                        <th class="px-4 py-3 text-center">已實現盈虧</th>
-                        <th class="px-4 py-3 text-center">報酬率</th>
-                        <th class="px-4 py-3 text-center w-10"></th>
-                    </tr>
+                <thead id="sp-thead" class="text-gray-500 dark:text-gray-400 text-xs tracking-wider border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white/95 dark:bg-bgDark/95 backdrop-blur-md z-10">
                 </thead>
                 <tbody id="sp-list" class="text-sm text-gray-700 dark:text-gray-200"></tbody>
             </table>
