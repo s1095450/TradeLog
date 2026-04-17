@@ -180,7 +180,7 @@ function renderHoldingsTable() {
                 const tSign  = twdAmt >= 0 ? '+' : '';
                 amtCell = `<div class="flex flex-col items-center leading-tight">
                     <span class="font-bold ${pColor}">${uSign}${formatNum(unrealized)} USD</span>
-                    <span class="text-xs ${pColor} opacity-70">${tSign}${formatNum(twdAmt, 0)} TWD</span>
+                    <span class="text-xs ${pColor} opacity-70">≈ ${tSign}${formatNum(twdAmt, 0)} TWD</span>
                 </div>`;
             } else {
                 amtCell = `<span class="font-bold ${pColor}">${uSign}${formatNum(unrealized, 0)} ${currency}</span>`;
@@ -195,8 +195,22 @@ function renderHoldingsTable() {
                 <td class="${tdBase} font-bold ${marketColor}">${h.symbol}</td>
                 <td class="px-3 py-2.5 text-left whitespace-nowrap text-gray-600 dark:text-gray-300">${h.name || '-'}</td>
                 <td class="${tdNum}">${h.qty.toLocaleString('en-US', {maximumFractionDigits: 4})}</td>
-                <td class="${tdNum}">${formatNum(h.avg_cost)} ${currency}</td>
-                <td class="${tdNum} font-bold text-purple-500 dark:text-purple-400">${formatNum(h.total_cost)} ${currency}</td>
+                <td class="${tdNum}">${
+                    h.market === '美股' && usdTwdRate
+                        ? `<div class="flex flex-col items-center leading-tight">
+                            <span>${formatNum(h.avg_cost)} USD</span>
+                            <span class="text-xs opacity-60">≈ ${formatNum(h.avg_cost * usdTwdRate, 0)} TWD</span>
+                           </div>`
+                        : `${formatNum(h.avg_cost)} ${currency}`
+                }</td>
+                <td class="${tdNum} font-bold text-purple-500 dark:text-purple-400">${
+                    h.market === '美股' && usdTwdRate
+                        ? `<div class="flex flex-col items-center leading-tight">
+                            <span>${formatNum(h.total_cost)} USD</span>
+                            <span class="text-xs text-purple-400/60 font-normal">≈ ${formatNum(h.total_cost * usdTwdRate, 0)} TWD</span>
+                           </div>`
+                        : `${formatNum(h.total_cost)} ${currency}`
+                }</td>
                 <td class="${tdNum}">${priceCell}</td>
                 <td class="${tdNum}">${pctCell}</td>
                 <td class="${tdNum}">${amtCell}</td>

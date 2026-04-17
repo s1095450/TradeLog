@@ -13,6 +13,7 @@ let fpInstance = null;
 let pageSize = 20;
 let currentPage = 1;
 let currentPageIds = [];
+let dashUsdProfit = 0; // 暫存美股 USD 已實現盈虧，供 TWD 換算
 
 // ==================== 初始化 ====================
 
@@ -39,6 +40,8 @@ async function refreshData() {
         animateValue("stat-twd", stats.data.twd, 'TWD');
         animateValue("stat-usd", stats.data.usd, 'USD');
         animateValue("stat-crypto", stats.data.crypto, 'USDT');
+        dashUsdProfit = stats.data.usd;
+        updateDashUsdTwd();
     }
 
     // 刷新表格
@@ -512,7 +515,14 @@ function renderTable() {
                     <td class="${tdText}">${row.name || '-'}</td>
                     <td class="${tdNum}">${row.qty}</td>
                     <td class="${tdNum} font-bold text-yellow-400 dark:text-yellow-300">${price}</td>
-                    <td class="${tdNum} font-bold text-purple-500 dark:text-purple-400">${formatNum(row.total_cost)}</td>
+                    <td class="${tdNum} font-bold text-purple-500 dark:text-purple-400">${
+                        viewMarket === '美股' && usdTwdRate
+                            ? `<div class="flex flex-col items-center leading-tight">
+                                <span>${formatNum(row.total_cost)} USD</span>
+                                <span class="text-xs text-purple-400/60 font-normal">≈ ${formatNum(row.total_cost * usdTwdRate, 0)} TWD</span>
+                               </div>`
+                            : formatNum(row.total_cost)
+                    }</td>
                     <td class="${tdNum}">${row.actual_twd}</td>
                     <td class="${tdNum}">${row.fee}</td>
                     <td class="${tdNum} font-bold ${pColor}">${profitDisplay}</td>
@@ -713,6 +723,21 @@ function clearDateFilter() {
 async function refreshDashboardLivePrices() {
     await refreshLivePrices();
     updateDashboardUnrealized();
+    updateDashUsdTwd();
+}
+
+function updateDashUsdTwd() {
+    const el = document.getElementById('stat-usd-twd');
+    if (!el) return;
+    if (usdTwdRate) {
+        const twd  = dashUsdProfit * usdTwdRate;
+        const sign = twd >= 0 ? '+' : '';
+        el.innerText  = `≈ ${sign}${formatNum(twd, 0)} TWD`;
+        el.className  = `text-xs table-num mt-1 ${twd >= 0 ? 'text-success/70' : 'text-danger/70'}`;
+    } else {
+        el.innerText = '--';
+        el.className = 'text-xs table-num mt-1 text-gray-400';
+    }
 }
 
 function updateDashboardUnrealized() {

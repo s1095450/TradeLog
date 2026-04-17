@@ -228,16 +228,29 @@ const Calendar = (() => {
             let profitHtml = '';
 
             if (t.market === '台股') {
+                const qty       = t.qty || 0;
+                const costBasis = (t.price_twd || 0) * qty - (t.profit || 0);
+                const roi       = costBasis > 0 ? (t.profit || 0) / costBasis * 100 : 0;
+                const roiSign   = roi >= 0 ? '+' : '';
                 priceHtml  = `@ ${(t.price_twd || 0).toLocaleString()} TWD`;
-                profitHtml = `<div class="font-extrabold table-num text-sm ${tColor}">${tSign}${Math.round(t.profit_twd).toLocaleString()} <span class="text-xs font-bold opacity-60">TWD</span></div>`;
+                profitHtml = `
+                    <div>
+                        <div class="font-extrabold table-num text-sm ${tColor} text-right">${tSign}${Math.round(t.profit_twd).toLocaleString()} <span class="text-xs font-bold opacity-60">TWD</span></div>
+                        <div class="text-xs table-num text-right ${tColor} opacity-70">${roiSign}${roi.toFixed(2)}%</div>
+                    </div>`;
             } else {
-                const uSign  = (t.profit_usd || 0) >= 0 ? '+' : '';
-                const uColor = (t.profit_usd || 0) >= 0 ? 'text-success' : 'text-danger';
+                const uSign     = (t.profit_usd || 0) >= 0 ? '+' : '';
+                const uColor    = (t.profit_usd || 0) >= 0 ? 'text-success' : 'text-danger';
+                const qty       = t.qty || 0;
+                const costBasis = (t.price_usd || 0) * qty - (t.profit_usd || 0);
+                const roi       = costBasis > 0 ? (t.profit_usd || 0) / costBasis * 100 : 0;
+                const roiSign   = roi >= 0 ? '+' : '';
                 priceHtml  = `@ $${(t.price_usd || 0).toFixed(2)}`;
                 profitHtml = `
                     <div>
                         <div class="text-xs ${uColor} table-num text-right">${uSign}$${Math.abs(t.profit_usd || 0).toFixed(2)} <span class="opacity-60">USD</span></div>
                         <div class="font-extrabold table-num text-sm ${tColor} text-right">${tSign}${Math.round(t.profit_twd).toLocaleString()} <span class="text-xs font-bold opacity-60">TWD</span></div>
+                        <div class="text-xs table-num text-right ${uColor} opacity-70">${roiSign}${roi.toFixed(2)}%</div>
                     </div>`;
             }
 

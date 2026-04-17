@@ -34,6 +34,13 @@ async function refreshStockProfit() {
     document.getElementById('sp-stat-twd').className    = `text-3xl font-extrabold table-num mt-2 ${colorClass(s.twd)}`;
     document.getElementById('sp-stat-usd').innerText    = fmt(s.usd);
     document.getElementById('sp-stat-usd').className    = `text-3xl font-extrabold table-num mt-2 ${colorClass(s.usd)}`;
+    const spUsdTwdEl = document.getElementById('sp-stat-usd-twd');
+    if (spUsdTwdEl) {
+        const twdVal  = s.usd_twd != null ? s.usd_twd : 0;
+        const twdSign = twdVal >= 0 ? '+' : '';
+        spUsdTwdEl.innerText  = `≈ ${twdSign}${formatNum(twdVal, 0)} TWD`;
+        spUsdTwdEl.className  = `text-xs table-num mt-0.5 ${colorClass(twdVal)}` + ' opacity-70';
+    }
     document.getElementById('sp-stat-crypto').innerText = fmt(s.crypto);
     document.getElementById('sp-stat-crypto').className = `text-3xl font-extrabold table-num mt-2 ${colorClass(s.crypto)}`;
 
@@ -135,7 +142,19 @@ function renderStockProfitList() {
                     const costBasis = s.market === 'Crypto' ? (price - profit) : (price * qty - profit);
                     const pct = costBasis > 0 ? profit / costBasis * 100 : 0;
                     const pctSign = pct > 0 ? '+' : '';
-                    profitDisplay = `<span class="font-bold ${profitColor}">${profit > 0 ? '+' : ''}${formatNum(profit)}</span>`;
+                    if (s.market === '美股') {
+                        const rate     = parseFloat(r.usd_twd_rate || 0);
+                        const profitTwd = rate ? Math.round(profit * rate) : null;
+                        const twdLine  = profitTwd !== null
+                            ? `<div class="text-xs ${profitColor} opacity-60 table-num">≈ ${profit > 0 ? '+' : ''}${profitTwd.toLocaleString()} TWD</div>`
+                            : '';
+                        profitDisplay = `<div class="flex flex-col items-center leading-tight">
+                            <span class="font-bold ${profitColor}">${profit > 0 ? '+' : ''}${formatNum(profit)} USD</span>
+                            ${twdLine}
+                        </div>`;
+                    } else {
+                        profitDisplay = `<span class="font-bold ${profitColor}">${profit > 0 ? '+' : ''}${formatNum(profit)}</span>`;
+                    }
                     pctDisplay = `<span class="font-bold ${profitColor}">${pctSign}${pct.toFixed(2)}%</span>`;
                 } else {
                     profitDisplay = `<span class="text-gray-400">-</span>`;
@@ -191,7 +210,14 @@ function renderStockProfitList() {
                 <td class="px-4 py-3.5 text-center text-gray-600 dark:text-gray-300">${s.name || '-'}</td>
                 <td class="px-4 py-3.5 text-center text-xs text-gray-500">${formatDateStr(s.last_date)}</td>
                 <td class="px-4 py-3.5 text-center table-num text-gray-500 text-sm">${s.buy_count} 買 / ${s.sell_count} 賣</td>
-                <td class="px-4 py-3.5 text-center font-bold table-num ${pColor}">${profitStr} ${s.sell_count > 0 ? currency : ''}</td>
+                <td class="px-4 py-3.5 text-center font-bold table-num ${pColor}">${
+                    s.market === '美股' && s.sell_count > 0
+                        ? `<div class="flex flex-col items-center leading-tight">
+                            <span>${profitStr} USD</span>
+                            <span class="text-xs opacity-60 font-normal">≈ ${s.total_profit >= 0 ? '+' : ''}${formatNum(s.total_profit_twd || 0, 0)} TWD</span>
+                           </div>`
+                        : `${profitStr} ${s.sell_count > 0 ? currency : ''}`
+                }</td>
                 <td class="px-4 py-3.5 text-center font-bold table-num ${pColor}">${totalPctStr}</td>
                 <td class="px-4 py-3.5 text-center text-gray-400 group-hover:text-primary transition-colors">
                     <iconify-icon icon="${isExpanded ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold'}" class="text-lg"></iconify-icon>
