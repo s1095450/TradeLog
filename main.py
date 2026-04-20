@@ -117,7 +117,10 @@ def _migrate_db(conn):
         c.execute("PRAGMA user_version = 2")
 
     if version < 3:
-        c.execute("ALTER TABLE dividend_holdings ADD COLUMN freq INTEGER DEFAULT 4")
+        try:
+            c.execute("ALTER TABLE dividend_holdings ADD COLUMN freq INTEGER DEFAULT 4")
+        except Exception:
+            pass
         c.execute("PRAGMA user_version = 3")
 
     conn.commit()
