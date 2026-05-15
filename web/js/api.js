@@ -43,4 +43,8 @@ const API = {
     deleteDividendRecord: (id) => eel.delete_dividend_record(id)(),
     getDividendLivePrices: () => eel.get_dividend_live_prices()(),
     fetchDividendAmount: (symbol) => eel.fetch_dividend_amount(symbol)(),
+
+    getCash: () => eel.get_cash()(),
+    setCash: (amount) => eel.set_cash(amount)(),
+    getCryptoNetValue: () => eel.get_crypto_net_value()(),
 };

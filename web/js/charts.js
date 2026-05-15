@@ -2,6 +2,10 @@
 // 圖表分析頁邏輯
 
 let chartInstances = {};  // 存放所有 Chart.js 實例，方便之後銷毀重建
+let holdingsForChart = [];
+let cryptoNetUsdt = 0;
+let cashTwd = 0;
+let pieChartCurrency = 'TWD';
 
 // ==================== 初始化 ====================
 
@@ -18,10 +22,24 @@ async function refreshCharts() {
 
     const d = res.data;
     renderStatCards(d.win_rate, d.best, d.worst);
-    renderPieChart(d.market_share);
     renderBarChart(d.monthly);
     renderRankChart(d.symbol_profit);
     renderLineChart(d.cumulative);
+
+    // 持倉市值 + Crypto + 現金
+    const [holdingsRes, cryptoRes, cashRes] = await Promise.all([
+        API.getHoldings(),
+        API.getCryptoNetValue(),
+        API.getCash(),
+    ]);
+    holdingsForChart = holdingsRes?.data || [];
+    cryptoNetUsdt = cryptoRes?.data || 0;
+    cashTwd = cashRes?.data || 0;
+    const cashInput = document.getElementById('cash-input');
+    if (cashInput) cashInput.value = cashTwd || '';
+
+    renderPieChart(computePieValues(pieChartCurrency));
+    initCashInput();
 }
 
 // ==================== 工具函數 ====================
@@ -100,56 +118,155 @@ function renderStatCards(winRate, best, worst) {
     document.getElementById('c-worst-profit').className = `text-2xl font-extrabold table-num mt-1 ${worstProfit >= 0 ? 'text-success' : 'text-danger'}`;
 }
 
-// ==================== 圓餅圖（市場佔比）====================
+// ==================== 圓餅圖（市場資產配置）====================
 
-function renderPieChart(marketShare) {
-    destroyChart('pieChart');
-    const total = marketShare.twd + marketShare.usd + marketShare.crypto;
+function computePieValues(currency) {
+    const rate = usdTwdRate || 31;
+    let tw = 0, us = 0;
+    holdingsForChart.forEach(h => {
+        const lp = livePricesData[h.symbol];
+        const price = lp ? lp.price : h.avg_cost;
+        const value = h.qty * price;
+        if (h.market === '台股')      tw += value;
+        else if (h.market === '美股') us += value * rate;
+    });
+    // Crypto：以買入淨投入 USDT 估算（無即時報價）
+    let crypto = cryptoNetUsdt * rate;
+    let cash   = cashTwd;
+    if (currency === 'USD') {
+        tw     /= rate;
+        us     /= rate;
+        crypto /= rate;
+        cash   /= rate;
+    }
+    return { tw, us, crypto, cash };
+}
+
+function fmtCompact(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+    return Math.round(n).toString();
+}
+
+function updatePieCenter(total, sym) {
+    const elVal = document.getElementById('pie-center-total');
+    const elLbl = document.getElementById('pie-center-label');
+    if (!elVal) return;
+    if (total <= 0) { elVal.textContent = ''; elLbl.textContent = ''; return; }
+    elVal.textContent = fmtCompact(total);
+    elLbl.textContent = sym;
+}
+
+function renderPieLegend(filtered, total) {
+    const el = document.getElementById('pie-legend');
+    if (!el) return;
+    const sym = pieChartCurrency === 'TWD' ? 'TWD' : 'USD';
+    updatePieCenter(total, sym);
+    if (filtered.length === 0) { el.innerHTML = ''; return; }
+    const labelColor = isDark() ? '#D1D5DB' : '#374151';
+    el.innerHTML = filtered.map(x => {
+        const pct = total > 0 ? ((x.v / total) * 100).toFixed(1) : '0.0';
+        return `<div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${x.c}"></span>
+            <span class="text-xs font-bold w-12 flex-shrink-0" style="color:${labelColor}">${x.l}</span>
+            <span class="text-xs table-num flex-shrink-0" style="color:${labelColor}">${formatNum(x.v, 0)}</span>
+            <span class="text-xs text-gray-400 flex-shrink-0">${sym}</span>
+            <span class="text-xs font-bold table-num w-10 text-right flex-shrink-0" style="color:${labelColor}">${pct}%</span>
+        </div>`;
+    }).join('');
+}
+
+function renderPieChart(values) {
+    const allLabels = ['台股', '美股', 'Crypto', '現金'];
+    const allColors = ['#26C0DB', '#A78BFA', '#4ECDC4', '#F59E0B'];
+    const allData   = [values.tw, values.us, values.crypto, values.cash];
+    const filtered  = allLabels.map((l, i) => ({ l, v: allData[i], c: allColors[i] })).filter(x => x.v > 0);
+    const total     = filtered.reduce((s, x) => s + x.v, 0);
 
     if (total === 0) {
         document.getElementById('pie-empty').classList.remove('hidden');
+        renderPieLegend([], 0);
+        if (chartInstances['pieChart']) destroyChart('pieChart');
         return;
     }
     document.getElementById('pie-empty').classList.add('hidden');
+    renderPieLegend(filtered, total);
+
+    const sym = pieChartCurrency === 'TWD' ? 'TWD' : 'USD';
+    const existing = chartInstances['pieChart'];
+    if (existing) {
+        existing.data.labels = filtered.map(x => x.l);
+        existing.data.datasets[0].data = filtered.map(x => x.v);
+        existing.data.datasets[0].backgroundColor = filtered.map(x => x.c);
+        existing.data.datasets[0].borderColor = isDark() ? '#2B3139' : '#FFFFFF';
+        existing.update();
+        return;
+    }
 
     const ctx = document.getElementById('pieChart').getContext('2d');
     chartInstances['pieChart'] = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: ['台股', '美股', 'Crypto'],
+            labels: filtered.map(x => x.l),
             datasets: [{
-                data: [marketShare.twd, marketShare.usd, marketShare.crypto],
-                backgroundColor: ['#26C0DB', '#A78BFA', '#4ECDC4'],
+                data: filtered.map(x => x.v),
+                backgroundColor: filtered.map(x => x.c),
                 borderColor: isDark() ? '#2B3139' : '#FFFFFF',
                 borderWidth: 3,
                 hoverOffset: 8,
             }]
         },
         options: {
-            cutout: '60%',
+            cutout: '65%',
             plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: tickColor(),
-                        padding: 16,
-                        font: { size: 12, weight: '600' },
-                        usePointStyle: true,
-                        pointStyleWidth: 8,
-                    }
-                },
+                legend: { display: false },
                 tooltip: {
                     callbacks: {
                         label: (ctx) => {
-                            const count = ctx.parsed;
-                            const pct = ((count / total) * 100).toFixed(1);
-                            return ` ${ctx.label}：${count} 筆 (${pct}%)`;
+                            const val = ctx.parsed;
+                            const tot = ctx.chart.data.datasets[0].data.reduce((s, v) => s + v, 0);
+                            const pct = ((val / tot) * 100).toFixed(1);
+                            return ` ${ctx.label}：${formatNum(val, 0)} ${sym} (${pct}%)`;
                         }
                     }
                 }
             },
-            animation: { animateRotate: true, duration: 1200 }
+            animation: { animateRotate: true, duration: 800, easing: 'easeInOutQuart' }
         }
+    });
+}
+
+function setPieCurrency(currency) {
+    pieChartCurrency = currency;
+    const btnTwd    = document.getElementById('pie-btn-twd');
+    const btnUsd    = document.getElementById('pie-btn-usd');
+    const cashLabel = document.getElementById('cash-currency-label');
+    const activeClass   = 'px-2 py-0.5 text-xs font-bold rounded-lg bg-primary text-white transition';
+    const inactiveClass = 'px-2 py-0.5 text-xs font-bold rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition';
+    if (currency === 'TWD') {
+        btnTwd.className = activeClass;
+        btnUsd.className = inactiveClass;
+        if (cashLabel) cashLabel.textContent = 'TWD';
+    } else {
+        btnUsd.className = activeClass;
+        btnTwd.className = inactiveClass;
+        if (cashLabel) cashLabel.textContent = 'USD';
+    }
+    renderPieChart(computePieValues(currency));
+}
+
+async function confirmCash() {
+    const input = document.getElementById('cash-input');
+    cashTwd = parseFloat(input.value) || 0;
+    await API.setCash(cashTwd);
+    renderPieChart(computePieValues(pieChartCurrency));
+}
+
+function initCashInput() {
+    const input = document.getElementById('cash-input');
+    if (!input) return;
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') confirmCash();
     });
 }
 

@@ -503,7 +503,15 @@ function renderTable() {
                 const costBasis = row.total_cost - row.profit;
                 const pct = costBasis > 0 ? row.profit / costBasis * 100 : 0;
                 const pctSign = pct > 0 ? '+' : '';
-                profitDisplay = `<span class="${pColor}">${row.profit > 0 ? '+' : ''}${formatNum(row.profit)} (${pctSign}${pct.toFixed(2)}%)</span>`;
+                const profitSign = row.profit > 0 ? '+' : '';
+                if (viewMarket === '美股' && usdTwdRate) {
+                    profitDisplay = `<div class="flex flex-col items-center leading-tight">
+                        <span class="${pColor}">${profitSign}${formatNum(row.profit)} (${pctSign}${pct.toFixed(2)}%)</span>
+                        <span class="text-xs ${pColor} opacity-60 font-normal">≈ ${profitSign}${formatNum(row.profit * usdTwdRate, 0)} TWD</span>
+                    </div>`;
+                } else {
+                    profitDisplay = `<span class="${pColor}">${profitSign}${formatNum(row.profit)} (${pctSign}${pct.toFixed(2)}%)</span>`;
+                }
             } else {
                 profitDisplay = `<span class="text-gray-400">-</span>`;
             }
@@ -656,7 +664,7 @@ function navigateTo(page) {
 
     // 日曆頁與高股息頁整頁顯示，隱藏左側輸入區
     const sidebar = document.getElementById('sidebar');
-    if (page === 'calendar' || page === 'dividend') {
+    if (page !== 'dashboard') {
         gsap.to(sidebar, { width: 0, opacity: 0, padding: 0, marginRight: 0, duration: 0.25, ease: 'power2.inOut',
             onComplete: () => sidebar.classList.add('hidden') });
     } else {

@@ -485,7 +485,10 @@
                         <div class="text-3xl font-extrabold text-primary" id="h-tw-count">0</div>
                         <div class="text-xs text-gray-400 mb-1">支股票</div>
                     </div>
-                    <div class="text-sm font-bold text-primary table-num mt-2" id="h-tw-cost">$0 TWD</div>
+                    <div class="flex items-baseline gap-1 mt-2">
+                        <div class="text-sm font-bold text-primary table-num" id="h-tw-cost">$0 TWD</div>
+                        <span class="text-xs text-gray-400">持倉成本</span>
+                    </div>
                 </div>
                 <!-- 美股持倉數 -->
                 <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
@@ -498,7 +501,10 @@
                         <div class="text-3xl font-extrabold text-purple-400" id="h-us-count">0</div>
                         <div class="text-xs text-gray-400 mb-1">支股票</div>
                     </div>
-                    <div class="text-sm font-bold text-purple-400 table-num mt-2" id="h-us-cost">$0.00 USD</div>
+                    <div class="flex items-baseline gap-1 mt-2">
+                        <div class="text-sm font-bold text-purple-400 table-num" id="h-us-cost">$0.00 USD</div>
+                        <span class="text-xs text-gray-400">持倉成本</span>
+                    </div>
                 </div>
                 <!-- 台股未實現盈虧 -->
                 <div class="glass rounded-2xl p-5 shadow-lg relative overflow-hidden">
@@ -608,25 +614,52 @@
             </div>
 
             <!-- 圓餅圖 + 排行榜 -->
-            <div class="grid grid-cols-5 gap-4 flex-shrink-0">
+            <div class="grid gap-4 flex-shrink-0" style="grid-template-columns: auto 1fr;">
 
                 <!-- 圓餅圖 -->
-                <div class="col-span-2 glass rounded-2xl p-5 shadow-lg">
-                    <p class="text-sm font-extrabold mb-4 flex items-center gap-2">
-                        <iconify-icon icon="solar:pie-chart-bold-duotone" class="text-primary"></iconify-icon>各市場交易次數
-                    </p>
-                    <div class="relative" style="height: 220px;">
-                        <canvas id="pieChart"></canvas>
-                        <div id="pie-empty" class="chart-empty hidden">
-                            <iconify-icon icon="solar:pie-chart-bold-duotone"
-                                class="text-4xl opacity-30"></iconify-icon>
-                            <span>尚無已實現盈虧</span>
+                <div class="glass rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-extrabold flex items-center gap-2">
+                            <iconify-icon icon="solar:pie-chart-bold-duotone" class="text-primary"></iconify-icon>各市場資產配置
+                        </p>
+                        <div class="flex gap-1">
+                            <button id="pie-btn-twd" onclick="setPieCurrency('TWD')"
+                                class="px-2 py-0.5 text-xs font-bold rounded-lg bg-primary text-white transition">TWD</button>
+                            <button id="pie-btn-usd" onclick="setPieCurrency('USD')"
+                                class="px-2 py-0.5 text-xs font-bold rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">USD</button>
                         </div>
+                    </div>
+                    <div class="flex items-center gap-6" style="min-height: 180px;">
+                        <div class="flex-shrink-0 relative" style="width: 170px; height: 170px;">
+                            <canvas id="pieChart"></canvas>
+                            <div id="pie-empty" class="chart-empty hidden">
+                                <iconify-icon icon="solar:pie-chart-bold-duotone"
+                                    class="text-4xl opacity-30"></iconify-icon>
+                                <span>尚無持倉資料</span>
+                            </div>
+                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div class="text-center leading-tight">
+                                    <div id="pie-center-total" class="text-sm font-extrabold table-num text-gray-800 dark:text-white"></div>
+                                    <div id="pie-center-label" class="text-xs text-gray-400 mt-0.5"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="pie-legend" class="flex flex-col gap-3 justify-center"></div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50 flex items-center gap-2">
+                        <iconify-icon icon="solar:wallet-money-bold-duotone" class="text-gray-400 text-base flex-shrink-0"></iconify-icon>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 font-bold whitespace-nowrap">現金水位</span>
+                        <input type="number" id="cash-input" min="0" step="1000"
+                            class="w-28 bg-transparent border-b border-gray-300 dark:border-gray-600 text-sm font-bold text-right outline-none focus:border-primary transition py-0.5"
+                            placeholder="0">
+                        <span id="cash-currency-label" class="text-xs text-gray-400">TWD</span>
+                        <button onclick="confirmCash()"
+                            class="px-2.5 py-1 text-xs font-bold rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition whitespace-nowrap">確認</button>
                     </div>
                 </div>
 
                 <!-- 標的排行 -->
-                <div class="col-span-3 glass rounded-2xl p-5 shadow-lg">
+                <div class="min-w-0 glass rounded-2xl p-5 shadow-lg">
                     <p class="text-sm font-extrabold mb-4 flex items-center gap-2">
                         <iconify-icon icon="solar:ranking-bold-duotone" class="text-primary"></iconify-icon>各標的盈虧排行 (Top
                         10)

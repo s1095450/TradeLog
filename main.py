@@ -78,6 +78,12 @@ def init_db():
             remark          TEXT
         )
     ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key     TEXT PRIMARY KEY,
+            value   TEXT
+        )
+    ''')
     conn.commit()
     _migrate_db(conn)
     _backfill_usdtwd_rates(conn)
@@ -1106,6 +1112,50 @@ def get_calendar_years():
         min_year = int(row['min_d'][:4])
         max_year = max(int(row['max_d'][:4]), current_year)
         return {'status': 'success', 'data': list(range(min_year, max_year + 1))}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+# ==================== Crypto 持倉估算 ====================
+
+@eel.expose
+def get_crypto_net_value():
+    """估算目前 Crypto 剩餘淨投入金額（USDT）：買入總額 - 賣出總額"""
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT action, price FROM crypto_records")
+        rows = c.fetchall()
+        conn.close()
+        net = sum(r[1] for r in rows if r[0] == '買入') - sum(r[1] for r in rows if r[0] == '賣出')
+        return {'status': 'ok', 'data': max(0.0, round(net, 2))}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+# ==================== 設定 ====================
+
+@eel.expose
+def get_cash():
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("SELECT value FROM settings WHERE key = 'cash_twd'")
+        row = c.fetchone()
+        conn.close()
+        return {'status': 'ok', 'data': float(row[0]) if row else 0}
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+@eel.expose
+def set_cash(amount):
+    try:
+        conn = get_conn()
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('cash_twd', ?)", (str(amount),))
+        conn.commit()
+        conn.close()
+        return {'status': 'ok'}
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
 
